@@ -57,6 +57,7 @@
   async function go() {
     const hash = window.location.hash || "#/dashboard";
     const { route, params } = matchRoute(hash);
+    console.log("[Router] Navigating to:", hash, "→", route.view);
     document.getElementById("page-title").textContent = route.title;
     highlightNav(route.view);
 
@@ -65,7 +66,7 @@
     try {
       await VIEWS[route.view](root, params);
     } catch (e) {
-      console.error(e);
+      console.error("[Router] View render failed:", e);
       root.innerHTML = UI.errorBox(e);
     }
   }
@@ -109,6 +110,12 @@
   }
 
   // start
-  if (document.readyState !== "loading") boot();
-  else document.addEventListener("DOMContentLoaded", boot);
+  console.log("[App] Booting Raid Management System…");
+  console.log("[App] API base:", typeof API !== "undefined" ? "API loaded" : "API MISSING!");
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    // DOM already ready (scripts are at end of body)
+    boot();
+  }
 })();

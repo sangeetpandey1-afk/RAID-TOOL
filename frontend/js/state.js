@@ -19,29 +19,49 @@ const State = (function () {
   // ---- cached fetchers (memoised first call) ----
   async function getDevices() {
     if (!cache.devices) {
-      const r = await API.listDevices();
-      cache.devices = r.data || [];
+      try {
+        const r = await API.listDevices();
+        cache.devices = r.data || [];
+      } catch (e) {
+        console.warn("Failed to load devices:", e.message);
+        cache.devices = [];
+      }
     }
     return cache.devices;
   }
   async function getDeviceCategories() {
     if (!cache.deviceCategories) {
-      const r = await API.deviceCategories();
-      cache.deviceCategories = r.data || [];
+      try {
+        const r = await API.deviceCategories();
+        cache.deviceCategories = r.data || [];
+      } catch (e) {
+        console.warn("Failed to load device categories:", e.message);
+        cache.deviceCategories = [];
+      }
     }
     return cache.deviceCategories;
   }
   async function getRateCategories() {
     if (!cache.rateCategories) {
-      const r = await API.rateCategories();
-      cache.rateCategories = r.data || [];
+      try {
+        const r = await API.rateCategories();
+        cache.rateCategories = r.data || [];
+      } catch (e) {
+        console.warn("Failed to load rate categories:", e.message);
+        cache.rateCategories = [];
+      }
     }
     return cache.rateCategories;
   }
   async function getSystemConfig() {
     if (!cache.systemConfig) {
-      const r = await API.systemConfig();
-      cache.systemConfig = r.data || {};
+      try {
+        const r = await API.systemConfig();
+        cache.systemConfig = r.data || {};
+      } catch (e) {
+        console.warn("Failed to load system config:", e.message);
+        cache.systemConfig = {};
+      }
     }
     return cache.systemConfig;
   }
@@ -51,7 +71,7 @@ const State = (function () {
         const r = await API.health();
         cache.health = r.data || {};
       } catch (e) {
-        cache.health = { status: "down", error: e.message };
+        cache.health = { status: "down", error: e.message, db_ok: false };
       }
     }
     return cache.health;

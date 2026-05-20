@@ -5,8 +5,17 @@
 
 const API = (function () {
 
-  // Same-origin if served by Flask; else use full URL (override via window.RAID_API_URL)
-  const BASE = (window.RAID_API_URL || "").replace(/\/$/, "");
+  // Same-origin if served by Flask; auto-detect base URL
+  // Priority: 1) window.RAID_API_URL  2) same origin  3) localhost:5000
+  const BASE = (function() {
+    if (window.RAID_API_URL) return window.RAID_API_URL.replace(/\/$/, "");
+    // If we're served from Flask (/app/index.html), the origin IS the API server
+    if (window.location.origin && window.location.origin !== "null") {
+      return window.location.origin;
+    }
+    // Fallback for file:// protocol (shouldn't happen but just in case)
+    return "http://127.0.0.1:5000";
+  })();
 
   /** Generic request helper */
   async function request(path, opts = {}) {

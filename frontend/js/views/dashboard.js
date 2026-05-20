@@ -8,9 +8,7 @@ const DashboardView = (function () {
     root.innerHTML = `
       <div class="space-y-6">
         <!-- Stat cards -->
-        <div id="dash-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          ${UI.spinner("Loading dashboard…")}
-        </div>
+        <div id="dash-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
 
         <!-- Timeline alerts -->
         <div class="card">
@@ -19,7 +17,7 @@ const DashboardView = (function () {
             <span class="text-xs text-slate-500">Legal compliance deadlines</span>
           </div>
           <div id="dash-alerts" class="card-body">
-            ${UI.spinner()}
+            <p class="text-sm text-slate-500">Loading alerts…</p>
           </div>
         </div>
 
@@ -27,27 +25,33 @@ const DashboardView = (function () {
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="card">
             <div class="card-header">💰 Recent Payments</div>
-            <div id="dash-payments" class="card-body p-0">${UI.spinner()}</div>
+            <div id="dash-payments" class="card-body p-0"><p class="p-4 text-sm text-slate-400">Loading…</p></div>
           </div>
           <div class="card">
             <div class="card-header">📞 Recent Inquiries</div>
-            <div id="dash-inquiries" class="card-body p-0">${UI.spinner()}</div>
+            <div id="dash-inquiries" class="card-body p-0"><p class="p-4 text-sm text-slate-400">Loading…</p></div>
           </div>
         </div>
       </div>`;
 
-    // Fire all in parallel
-    const [summary, alerts, payments, inquiries] = await Promise.allSettled([
-      API.dashboardSummary(),
-      API.timelineAlerts(),
-      API.recentPayments(8),
-      API.recentInquiries(8),
-    ]);
-
-    renderStats(document.getElementById("dash-stats"), summary);
-    renderAlerts(document.getElementById("dash-alerts"), alerts);
-    renderPayments(document.getElementById("dash-payments"), payments);
-    renderInquiries(document.getElementById("dash-inquiries"), inquiries);
+    // Fire all in parallel — each one independently updates its section
+    try {
+      const [summary, alerts, payments, inquiries] = await Promise.allSettled([
+        API.dashboardSummary(),
+        API.timelineAlerts(),
+        API.recentPayments(8),
+        API.recentInquiries(8),
+      ]);
+      renderStats(document.getElementById("dash-stats"), summary);
+      renderAlerts(document.getElementById("dash-alerts"), alerts);
+      renderPayments(document.getElementById("dash-payments"), payments);
+      renderInquiries(document.getElementById("dash-inquiries"), inquiries);
+    } catch (e) {
+      console.error("Dashboard load error:", e);
+      document.getElementById("dash-stats").innerHTML = UI.errorBox(
+        "Backend server se connect nahi ho paa raha. Kya python -m backend.app chal raha hai? Check karo http://localhost:5000/api/health"
+      );
+    }
   }
 
   // ---------------------------------------------- stat cards
