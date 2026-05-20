@@ -354,9 +354,9 @@ def search_cases():
         where.append("total_assessment <= ?")
         params.append(safe_float(args["max_amount"]))
 
-    div_join = ""
+    # Always LEFT JOIN consumers so we can show name + div in results
+    join = "LEFT JOIN consumers c ON c.id = r.consumer_id "
     if args.get("div_no"):
-        div_join = "JOIN consumers c ON c.id = r.consumer_id "
         where.append("c.div_code=?")
         params.append(args["div_no"])
 
@@ -366,11 +366,16 @@ def search_cases():
     offset = (page - 1) * page_size
 
     total = fetch_one(
-        f"SELECT COUNT(*) AS c FROM raid_cases r {div_join} {where_clause}",
+        f"SELECT COUNT(*) AS c FROM raid_cases r {join} {where_clause}",
         params,
     )["c"]
     rows = fetch_all(
-        f"""SELECT r.* FROM raid_cases r {div_join}
+        f"""SELECT r.*,
+                   COALESCE(NULLIF(r.user_name,''), c.name) AS user_name,
+                   c.father_name AS consumer_father,
+                   c.village     AS consumer_village,
+                   c.div_code    AS div_code
+            FROM raid_cases r {join}
             {where_clause}
             ORDER BY r.inspection_date DESC, r.id DESC
             LIMIT ? OFFSET ?""",

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>विद्युत चोरी रेड प्रबंधन सिस्टम / Raid Management System</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            hindi: ['Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50:  '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Google Fonts: Inter + Noto Sans Devanagari for Hindi -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/app/css/styles.css" />
+</head>
+
+<body class="bg-slate-100 font-sans text-slate-800 antialiased">
+
+  <!-- =========================================================
+       APP SHELL — sidebar + top bar + main content
+       ========================================================= -->
+  <div class="flex h-screen overflow-hidden">
+
+    <!-- ====== SIDEBAR ====== -->
+    <aside class="hidden lg:flex w-64 flex-col bg-slate-900 text-slate-200">
+      <div class="px-6 py-5 border-b border-slate-800">
+        <h1 class="font-hindi text-lg font-bold leading-tight text-white">
+          विद्युत चोरी
+        </h1>
+        <p class="text-xs text-slate-400 mt-1">Raid Management System</p>
+      </div>
+
+      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <a href="#/dashboard" data-nav="dashboard"
+           class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg> Dashboard
+        </a>
+
+        <a href="#/new-raid" data-nav="new-raid"
+           class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 4v16m8-8H4"/>
+          </svg> नया रेड / New Raid
+        </a>
+
+        <a href="#/cases" data-nav="cases"
+           class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg> Cases / केस
+        </a>
+
+        <a href="#/consumers" data-nav="consumers"
+           class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg> उपभोक्ता / Consumers
+        </a>
+
+        <a href="#/master-data" data-nav="master-data"
+           class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7c-2 0-3 1-3 3z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 9h6M9 13h6M9 17h4"/>
+          </svg> Master Data
+        </a>
+
+        <a href="#/settings" data-nav="settings"
+           class="nav-link flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-800">
+          <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg> Settings
+        </a>
+      </nav>
+
+      <div class="px-4 py-3 border-t border-slate-800 text-xs text-slate-500">
+        <div class="flex items-center justify-between">
+          <span>v1.0.0</span>
+          <span id="server-status"
+                class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-800">
+            <span class="w-2 h-2 rounded-full bg-yellow-400 mr-1.5"></span>
+            Connecting…
+          </span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ====== MAIN CONTENT ====== -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Top bar -->
+      <header class="bg-white shadow-sm border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+        <button id="mobile-menu-btn"
+                class="lg:hidden text-slate-500 hover:text-slate-700">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+
+        <h2 id="page-title" class="text-lg font-semibold text-slate-700">Dashboard</h2>
+
+        <div class="flex items-center space-x-3">
+          <span class="hidden sm:block text-sm text-slate-500">
+            <span id="current-date" class="font-medium text-slate-700"></span>
+          </span>
+          <button id="refresh-btn" title="Refresh"
+                  class="p-2 rounded-md hover:bg-slate-100 text-slate-500 hover:text-slate-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main scrollable area -->
+      <main id="view" class="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-50">
+        <!-- Views will be injected here by router -->
+        <div class="text-center py-20 text-slate-400">
+          <svg class="w-12 h-12 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581"/>
+          </svg>
+          <p class="mt-4">Loading…</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===== Toast container ===== -->
+  <div id="toast-container"
+       class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+  </div>
+
+  <!-- ===== Modal container ===== -->
+  <div id="modal-root"></div>
+
+  <!-- ============================================================ -->
+  <!-- JS modules                                                    -->
+  <!-- ============================================================ -->
+  <script src="/app/js/api.js"></script>
+  <script src="/app/js/state.js"></script>
+  <script src="/app/js/components.js"></script>
+  <script src="/app/js/views/dashboard.js"></script>
+  <script src="/app/js/views/raid-form.js"></script>
+  <script src="/app/js/views/cases.js"></script>
+  <script src="/app/js/views/case-detail.js"></script>
+  <script src="/app/js/views/consumers.js"></script>
+  <script src="/app/js/views/master-data.js"></script>
+  <script src="/app/js/views/settings.js"></script>
+  <script src="/app/js/app.js"></script>
+</body>
+</html>

@@ -58,10 +58,15 @@ def create_app() -> Flask:
     log.info("Repo root: %s", config.ROOT_DIR)
     log.info("DB path:   %s", config.DB_PATH)
 
-    app = Flask(__name__)
+    frontend_dir = config.ROOT_DIR / "frontend"
+    app = Flask(
+        __name__,
+        static_folder=str(frontend_dir),
+        static_url_path="/app",
+    )
     app.config["JSON_AS_ASCII"] = False  # keep हिंदी text readable
     app.config["JSON_SORT_KEYS"] = False
-    CORS(app, resources={r"/api/*": {"origins": "*"}})  # Excel VBA needs CORS off
+    CORS(app, resources={r"/api/*": {"origins": "*"}})  # CORS open for local + remote use
 
     # Initialize schema (idempotent)
     init_schema()
@@ -107,11 +112,22 @@ def create_app() -> Flask:
 
     @app.route("/")
     def _root():
+        # Redirect to the web UI; if it's missing, return JSON service info
+        from flask import redirect, send_from_directory
+        index = frontend_dir / "index.html"
+        if index.exists():
+            return redirect("/app/index.html", code=302)
         return envelope_ok({
             "service": "Raid Management System",
             "version": "1.0.0",
             "docs": "/api/health",
+            "ui": "frontend not built — run /app/index.html when present",
         })
+
+    @app.route("/app")
+    def _app_root():
+        from flask import send_from_directory
+        return send_from_directory(str(frontend_dir), "index.html")
 
     log.info("App ready. Routes registered: %d", len(list(app.url_map.iter_rules())))
     return app

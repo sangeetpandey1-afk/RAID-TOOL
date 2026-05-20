@@ -1,16 +1,33 @@
 # विद्युत चोरी रेड प्रबंधन सिस्टम / Raid Management System
 
-UPPCL-style electricity theft case management system. **Excel + Python (Flask + SQLite)** offline architecture with auto-generated legal notices, multi-level offense detection, LFHD-based assessment, and Section 152 compounding (per-KW or part-thereof, round-up).
+UPPCL-style electricity theft case management system. **Modern Web UI + Python (Flask + SQLite)** offline architecture with auto-generated legal notices, multi-level offense detection, LFHD-based assessment, and Section 152 compounding (per-KW or part-thereof, round-up).
 
 > Full project specification: see [`.kiro/steering/project-spec.md`](./.kiro/steering/project-spec.md)
 
 ---
 
-## Quick Start (Windows — User's machine)
+## ✨ Features
+
+- **🌐 Web UI** — Tailwind CSS + vanilla JS, runs in any browser, no Excel needed
+- **📊 Dashboard** — Stats, timeline alerts (sec 3/5 due, overdue, appeal window)
+- **➕ Raid Entry Form** — Three-tier layout (Consumer / LFHD / History) with live calculation
+- **🔍 Multi-parameter Search** — Account / SC / fuzzy name / village
+- **📚 Offense Detection** — 4-level (account → SC → mapping → fuzzy) with auto-multiplier
+- **⚡ LFHD Calculator** — Section-aware (135=365d, 138=TD-to-today), slab-wise rates
+- **💸 Section 152 Compounding** — Per-KW or part-thereof round-up + Hindi justification
+- **📄 Document Generation** — 9 kinds (provisional consumer/office, sec 3, sec 5, thanedari, envelope, deposit slip, compounding order, NOC) with auto-fallback when no template
+- **💰 Payment Tracking** — Multi-component (assessment / compounding / shaman / admin), auto-NOC eligibility
+- **📞 Inquiry Log** — Caller history per case
+- **📨 Notice Tracker** — Provisional / Sec 3 / Sec 5 with auto-derived due dates
+- **🛂 Master Data Importer** — Robust column-mapping, handles Hindi/Krutidev/English
+
+---
+
+## 🚀 Quick Start (Windows)
 
 ### 1. Prerequisites
 - **Python 3.10+** ([download](https://www.python.org/downloads/))
-- **Microsoft Excel** with macros enabled (Trust Center → Macro Settings → Enable VBA)
+- A modern **web browser** (Chrome / Edge / Firefox)
 
 ### 2. Clone & Install
 ```cmd
@@ -21,8 +38,15 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Place Master-Data Files
-Copy these Excel files into the `master_data/` folder (any of the variants are accepted):
+### 3. Run
+```cmd
+python -m backend.app
+```
+
+Server starts on `http://localhost:5000`. **Open `http://localhost:5000/` in your browser** — you'll be redirected to the web app.
+
+### 4. Place & Import Master-Data Files
+Drop these Excel files into `master_data/` folder:
 
 | Required content                  | Accepted file names |
 |----------------------------------|---------------------|
@@ -33,51 +57,84 @@ Copy these Excel files into the `master_data/` folder (any of the variants are a
 | Rate slabs                       | `slab_rates.xlsx` |
 | Account mapping (optional)       | `account_mapping.xlsx` |
 
-### 4. Initialize DB & Run Backend
-```cmd
-python -m backend.app
-```
-Server starts on `http://localhost:5000`. The DB (`raid_database.db`) is created automatically on first run.
-
-### 5. Import Master Data
-Once the server is up, hit:
+Then go to **Master Data → Import All Master Data** in the UI, or via curl:
 ```cmd
 curl -X POST http://localhost:5000/api/import_all_master_data
 ```
-or use the **"Import Master Data"** button in the Excel UI.
 
 ---
 
-## API Reference (Phase 1)
+## 🖥️ Web UI Tour
 
-| Endpoint                                  | Method | Purpose |
-|-------------------------------------------|--------|---------|
-| `/api/health`                             | GET    | Health check |
-| `/api/import_all_master_data`             | POST   | Import all Excel master files (the buggy endpoint — now fixed with column-mapping flexibility) |
-| `/api/import_master/<type>`               | POST   | Import a single master file (`consumers`, `historical`, `current`, `devices`, `rates`, `mapping`) |
-| `/api/consumers/search?q=...&account=...` | GET    | Multi-parameter consumer search |
-| `/api/consumers/<account>`                | GET    | Get full consumer profile + offense history |
-| `/api/devices`                            | GET    | List device master |
-| `/api/rates?category=LMV-1`               | GET    | Get rate slabs for a category |
-| `/api/cases`                              | POST   | Save / update a raid case |
-| `/api/cases/<case_id>`                    | GET    | Retrieve a case (incl. revisions) |
-| `/api/cases/search`                       | GET    | Multi-parameter case search |
-| `/api/cases/<case_id>/calculate`          | POST   | Run LFHD + assessment calculation |
-| `/api/cases/<case_id>/compounding`        | POST   | Section 152 compounding (round-up KW) |
-| `/api/cases/<case_id>/offense-check`      | GET    | Multi-level offense detection |
-| `/api/cases/<case_id>/document/<type>`    | GET    | Generate document (provisional_consumer, provisional_office, section3, section5, thanedari, deposit_slip, envelope) |
-| `/api/cases/<case_id>/payments`           | GET/POST | Payment list / record new payment |
-| `/api/cases/<case_id>/inquiries`          | GET/POST | Inquiry log |
-| `/api/cases/<case_id>/notices`            | GET/POST | Notice tracker |
+| URL                          | Page              | Purpose |
+|------------------------------|-------------------|---------|
+| `/` or `#/dashboard`         | Dashboard         | Stats + timeline alerts + recent activity |
+| `#/new-raid`                 | New Raid Entry    | Three-tier form: Consumer + LFHD + History |
+| `#/cases`                    | Case Search       | Multi-parameter list with filters |
+| `#/case/<case_id>`           | Case Detail       | Tabs: Overview / Assessment / Payments / Inquiries / Notices / Documents / Revisions |
+| `#/consumers`                | Consumer Search   | Multi-level matcher (account / SC / fuzzy name) |
+| `#/consumer/<account>`       | Consumer Profile  | Full record + offense history |
+| `#/master-data`              | Master Data       | Import status + devices + rate categories |
+| `#/settings`                 | Settings          | System config + health + templates |
+
+---
+
+## 🧰 API Reference (44 routes)
 
 All responses use a uniform envelope:
 ```json
 { "ok": true, "data": { ... }, "meta": { ... } }
 ```
-On error:
-```json
-{ "ok": false, "error": "human readable message", "details": "...", "code": "ERR_X" }
-```
+
+### Health & system
+- `GET /api/health`
+- `GET /api/system/config`
+
+### Master data
+- `GET /api/master_files` — Diagnostic: which files were detected
+- `POST /api/import_all_master_data` — Import everything available
+- `POST /api/import_master/<kind>` — Import one (kinds: consumers, historical, current, devices, rates, mapping)
+
+### Consumers
+- `GET /api/consumers/search?account=&sc=&q=&name=&father=&village=&limit=&threshold=`
+- `GET /api/consumers/<account>` — Profile + offense history + inquiries
+- `GET /api/consumers/<account>/offense-check?name=&father=&village=`
+
+### Devices & rates
+- `GET /api/devices?category=`
+- `GET /api/devices/categories`
+- `GET /api/rates?category=`
+- `GET /api/rates/categories`
+
+### Cases
+- `POST /api/cases` — Save / update case
+- `GET /api/cases/<case_id>` — Full case bundle
+- `GET /api/cases` and `GET /api/cases/search` — List with filters
+- `POST /api/calculate` and `POST /api/cases/<id>/calculate` — Live LFHD calc
+- `POST /api/compounding` and `POST /api/cases/<id>/compounding` — Section 152
+- `GET /api/cases/<id>/offense-check`
+- `POST /api/cases/<id>/revise` — Post-appeal revision
+
+### Documents
+- `GET /api/document/kinds`
+- `POST /api/cases/<id>/document/<kind>` — Generate (saves to `docs/<case_id>/`)
+- `GET /api/documents/<doc_id>` — Download
+- `POST /api/templates/migrate-legacy` — Convert `«FIELD»` → `{{ FIELD }}`
+
+### Payments / Inquiries / Notices
+- `GET|POST /api/cases/<id>/payments`
+- `DELETE /api/payments/<id>`
+- `GET /api/payments/recent?limit=`
+- `GET|POST /api/cases/<id>/inquiries`
+- `GET /api/inquiries/recent?limit=`
+- `GET /api/inquiries/by-mobile/<mobile>`
+- `GET|POST /api/cases/<id>/notices`
+- `PATCH /api/notices/<id>`
+- `GET /api/notices/overdue`
+
+### Dashboard
+- `GET /api/dashboard/summary`
+- `GET /api/dashboard/timeline-alerts`
 
 ---
 
@@ -86,7 +143,7 @@ On error:
 ```
 RAID-TOOL/
 ├── backend/
-│   ├── app.py                  # Flask main entry
+│   ├── app.py                  # Flask main entry (also serves /app/* frontend)
 │   ├── config.py               # Paths, ports, defaults
 │   ├── database.py             # SQLite schema + connection
 │   ├── routes/                 # HTTP routes (blueprints)
@@ -97,22 +154,39 @@ RAID-TOOL/
 │   │   ├── document.py
 │   │   ├── payment.py
 │   │   ├── inquiry.py
-│   │   └── notice.py
+│   │   ├── notice.py
+│   │   └── device_rate.py
 │   ├── services/               # Business logic
 │   │   ├── importer.py         # Robust column-mapping importer
 │   │   ├── calculator.py       # LFHD + slab-wise assessment
 │   │   ├── compounding.py      # Section 152 (per-KW round-up)
-│   │   ├── offense_detector.py # 4-level matching
-│   │   └── doc_generator.py    # python-docx templates
+│   │   ├── matcher.py          # 4-level offense detection
+│   │   └── doc_generator.py    # python-docx templates + autogen
 │   └── models/
 │       └── schema.sql          # Reference schema
-├── frontend/
-│   └── RaidSystem_README.md    # VBA module reference
+├── frontend/                   # Modern web UI (vanilla JS + Tailwind CDN)
+│   ├── index.html              # App shell
+│   ├── css/styles.css
+│   └── js/
+│       ├── api.js              # Single API client
+│       ├── state.js            # In-memory cache
+│       ├── components.js       # Toast, modal, formatters
+│       ├── app.js              # Hash router
+│       └── views/
+│           ├── dashboard.js
+│           ├── raid-form.js    # Three-tier raid entry form
+│           ├── cases.js
+│           ├── case-detail.js  # Tabs: payments/inquiries/notices/docs
+│           ├── consumers.js
+│           ├── master-data.js
+│           └── settings.js
 ├── master_data/                # Place Excel master files here (gitignored)
-├── templates/                  # Word .docx templates with «PLACEHOLDERS»
+├── templates/                  # Word .docx templates with «PLACEHOLDERS» or {{ PLACEHOLDERS }}
 ├── docs/                       # Generated documents (runtime, gitignored)
 ├── backup/                     # Backups (gitignored)
 ├── logs/                       # Server logs (gitignored)
+├── scripts/
+│   └── smoke_test.sh           # End-to-end backend test
 ├── requirements.txt
 └── .kiro/steering/project-spec.md   # Full functional spec
 ```
@@ -157,7 +231,7 @@ Total_Units      = Σ Units_per_device
 |-----------|--------|
 | Project spec (steering doc) | ✅ |
 | Project structure | ✅ |
-| SQLite schema (15 tables) | ✅ |
+| SQLite schema (16 tables) | ✅ |
 | Flask app skeleton | ✅ |
 | Master data importer (fixes HTTP 500) | ✅ |
 | Consumer search | ✅ |
@@ -167,7 +241,7 @@ Total_Units      = Σ Units_per_device
 | Case management | ✅ |
 | Document generation foundation | ✅ |
 | Payment / Inquiry / Notice | ✅ |
-| Excel VBA refresh | ⏳ Phase 2 |
+| **Web UI (HTML + JS + Tailwind)** | ✅ |
 | Google Drive backup | ⏳ Phase 4 |
 
 ---
