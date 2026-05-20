@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# SQLite database (runtime data)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Excel master data (huge files, place locally)
+master_data/*.xlsx
+master_data/*.xls
+master_data/*.xlsm
+!master_data/SAMPLE_*.xlsx
+
+# Generated documents (runtime)
+docs/*.docx
+docs/*.pdf
+backup/*
+
+# Logs
+logs/*.log
+*.log
+
+# Excel temp files
+~$*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Env
+.env
+.env.local
+config.local.json
+credentials.json
+token.json
+
+# Keep folder structure
+!**/.gitkeep

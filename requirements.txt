@@ -1,0 +1,25 @@
+# Core web framework
+Flask==3.0.3
+Flask-Cors==4.0.1
+Werkzeug==3.0.3
+
+# Excel + data processing
+pandas==2.2.2
+openpyxl==3.1.5
+xlrd==2.0.1
+
+# Document generation
+python-docx==1.1.2
+reportlab==4.2.2
+docxtpl==0.18.0
+
+# Fuzzy matching for offense detection
+rapidfuzz==3.9.6
+
+# Utilities
+python-dateutil==2.9.0.post0
+
+# Optional: Google Drive backup (Phase 4)
+# google-api-python-client==2.140.0
+# google-auth-httplib2==0.2.0
+# google-auth-oauthlib==1.2.1
