@@ -125,7 +125,8 @@ FILE_PATTERNS: dict[str, list[str]] = {
     "consumers":  ["raid_master_data", "consumer_master", "raid master data",
                    "consumers", "master_data", "raidmasterdata"],
     "historical": ["all data", "all_data", "alldata", "historical",
-                   "historical_cases"],
+                   "historical_cases", "purana", "purane case", "old cases",
+                   "raid data", "past cases", "notice data"],
     "current":    ["raid excell 2526", "raid_excell_2526", "current_cases",
                    "raidexcell", "active_cases", "raid excel"],
     "devices":    ["device list", "device_list", "devices", "device master",
@@ -208,17 +209,35 @@ CONSUMER_SYNONYMS: dict[str, list[str]] = {
 }
 
 HISTORICAL_SYNONYMS: dict[str, list[str]] = {
-    "div_no":          ["div_no", "divno", "division", "div"],
+    "div_no":          ["div_no", "divno", "division", "div", "div. no",
+                        "div.no", "div no."],
     "name":            ["name", "consumer_name", "नाम"],
-    "father_name":     ["father_name", "fathername", "father", "पिता"],
-    "village":         ["village", "ग्राम"],
-    "account_id":      ["account_id", "acct_id", "account_no", "acno", "k_no"],
+    "father_name":     ["father_name", "fathername", "father", "father name",
+                        "पिता", "पिता का नाम"],
+    "village":         ["village", "ग्राम", "address"],
+    "account_id":      ["account_id", "acct_id", "account_no", "acno", "k_no",
+                        "old_ac_no", "old ac no", "old ac no.",
+                        "new_ac_no", "new ac no", "new ac no."],
     "case_date":       ["date", "case_date", "raid_date", "inspection_date",
                         "तिथि", "दिनांक"],
     "assessment_amount": ["assessment", "assessment_amount", "amount",
-                          "raashi", "राशि"],
+                          "assesement", "assesment", "raashi", "राशि"],
     "fir_number":      ["fir", "fir_no", "fir_number", "एफआईआर"],
-    "section":         ["dhara", "section", "धारा"],
+    "section":         ["dhara", "section", "धारा", "irregularity",
+                        "irregularity type"],
+    "notice_no":       ["notice_no", "notice no", "notice no.", "sr",
+                        "sr no", "sr."],
+    "use_name":        ["use_name", "use name", "user name", "user_name"],
+    "user_father":     ["user_father_name", "user father name",
+                        "user_father", "users father"],
+    "sub_station":     ["sub_station", "sub station", "substation", "ss"],
+    "old_ac_no":       ["old_ac_no", "old ac no", "old ac no.",
+                        "old_account", "old account"],
+    "new_ac_no":       ["new_ac_no", "new ac no", "new ac no.",
+                        "new_account", "new account"],
+    "category":        ["category", "catgary", "cat", "lmv"],
+    "payment_status":  ["paid/unpaid", "paid_unpaid", "payment_status",
+                        "pay_status", "paid", "unpaid"],
 }
 
 CURRENT_SYNONYMS: dict[str, list[str]] = {
@@ -407,9 +426,13 @@ def _upsert_consumer(conn, v: dict, raw: dict) -> str:
 
 def _upsert_historical(conn, v: dict, raw: dict) -> str:
     name = v.get("name")
-    acct = v.get("account_id")
+    acct = v.get("account_id") or v.get("old_ac_no") or v.get("new_ac_no")
     if not name and not acct:
         return "skipped"
+
+    # Use new_ac_no as primary account if available, fallback to old
+    primary_acct = normalize_account(v.get("new_ac_no")) or normalize_account(v.get("old_ac_no")) or normalize_account(acct)
+
     conn.execute(
         """INSERT INTO historical_cases
               (div_no, name, father_name, village, account_id,
@@ -421,7 +444,7 @@ def _upsert_historical(conn, v: dict, raw: dict) -> str:
             name and str(name).strip() or None,
             v.get("father_name") and str(v["father_name"]).strip() or None,
             v.get("village") and str(v["village"]).strip() or None,
-            normalize_account(acct) or None,
+            primary_acct or None,
             parse_date(v.get("case_date")),
             safe_float(v.get("assessment_amount")) or None,
             v.get("fir_number") and str(v["fir_number"]).strip() or None,
@@ -429,6 +452,39 @@ def _upsert_historical(conn, v: dict, raw: dict) -> str:
             to_json_str(raw),
         ),
     )
+
+    # Update offense_summary for repeat-offense detection
+    if primary_acct or (name and v.get("father_name") and v.get("village")):
+        consumer_key = primary_acct or f"{name}|{v.get('father_name')}|{v.get('village')}"
+        consumer_key = consumer_key.strip().lower() if consumer_key else None
+        if consumer_key:
+            existing_off = conn.execute(
+                "SELECT * FROM offense_summary WHERE consumer_key=?",
+                (consumer_key,)
+            ).fetchone()
+            case_dt = parse_date(v.get("case_date"))
+            assessment = safe_float(v.get("assessment_amount")) or 0
+
+            if existing_off:
+                conn.execute(
+                    """UPDATE offense_summary SET
+                          total_offenses = total_offenses + 1,
+                          first_offense_date = MIN(COALESCE(first_offense_date, ?), COALESCE(?, first_offense_date)),
+                          last_offense_date = MAX(COALESCE(last_offense_date, ?), COALESCE(?, last_offense_date)),
+                          total_assessment = total_assessment + ?,
+                          updated_at = datetime('now')
+                       WHERE consumer_key=?""",
+                    (case_dt, case_dt, case_dt, case_dt, assessment, consumer_key),
+                )
+            else:
+                conn.execute(
+                    """INSERT INTO offense_summary
+                          (consumer_key, total_offenses, first_offense_date,
+                           last_offense_date, total_assessment)
+                       VALUES (?, 1, ?, ?, ?)""",
+                    (consumer_key, case_dt, case_dt, assessment),
+                )
+
     return "inserted"
 
 
