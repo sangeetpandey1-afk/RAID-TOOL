@@ -1,9 +1,8 @@
-"""Mobile connectivity — QR code, mobile upload page, LAN discovery."""
+"""Mobile App — Full RAID system on phone (Search + Entry + Upload + Dashboard)."""
 from __future__ import annotations
-import io
 import logging
 import socket
-from flask import Blueprint, request, render_template_string
+from flask import Blueprint, request
 
 from .. import config
 from ..utils import envelope_ok
@@ -24,326 +23,6 @@ def _get_local_ip() -> str:
         return "127.0.0.1"
 
 
-# ===================================================================
-# GET /mobile/qr — Show QR code to connect phone
-# ===================================================================
-@bp.get("/qr")
-def show_qr():
-    """Generate a QR code page that phone can scan to connect."""
-    ip = _get_local_ip()
-    port = config.PORT
-    base_url = f"http://{ip}:{port}"
-    mobile_url = f"{base_url}/mobile/scan"
-
-    # Simple HTML page with QR code (using a JS QR library from CDN)
-    html = f"""<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<title>Mobile Connect — RAID System</title>
-<style>
-body {{ font-family: Arial; text-align: center; padding: 40px;
-       background: #1a1a2e; color: #fff; }}
-.box {{ background: #fff; color: #333; padding: 30px; border-radius: 15px;
-        display: inline-block; margin-top: 20px; }}
-h1 {{ color: #00d4ff; }}
-.url {{ font-size: 18px; background: #f0f0f0; padding: 10px;
-        border-radius: 5px; margin: 15px 0; word-break: break-all; color: #333; }}
-#qrcode {{ margin: 20px auto; }}
-.info {{ color: #aaa; margin-top: 20px; font-size: 14px; }}
-</style>
-</head><body>
-<h1>Mobile Scanner Connect</h1>
-<p>Phone se ye QR code scan karein ya URL browser mein dalein</p>
-<div class="box">
-  <div id="qrcode"></div>
-  <div class="url"><strong>{mobile_url}</strong></div>
-  <p>Server IP: <strong>{ip}:{port}</strong></p>
-</div>
-<div class="info">
-  <p>Ensure phone and computer are on same WiFi network</p>
-  <p>दोनों devices एक ही WiFi पर होने चाहिए</p>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script>
-new QRCode(document.getElementById("qrcode"), {{
-    text: "{mobile_url}",
-    width: 256, height: 256,
-    colorDark: "#000", colorLight: "#fff"
-}});
-</script>
-</body></html>"""
-    return html
-
-
-# ===================================================================
-# GET /mobile/scan — Mobile-friendly upload page
-# ===================================================================
-@bp.get("/scan")
-@bp.get("/scan/<case_id>")
-def mobile_scan_page(case_id: str = ""):
-    """Mobile-optimized HTML page for scanning and uploading documents."""
-    ip = _get_local_ip()
-    port = config.PORT
-    base_url = f"http://{ip}:{port}"
-
-    html = """<!DOCTYPE html>
-<html lang="hi"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Document Scanner — RAID System</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-       background: #f5f5f5; min-height: 100vh; padding: 10px; }
-.header { background: linear-gradient(135deg, #667eea, #764ba2);
-           color: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px;
-           text-align: center; }
-.header h1 { font-size: 20px; margin-bottom: 5px; }
-.header p { font-size: 13px; opacity: 0.9; }
-.card { background: #fff; border-radius: 12px; padding: 20px;
-         margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-.card h3 { color: #333; margin-bottom: 12px; font-size: 16px; }
-label { display: block; font-size: 14px; color: #555; margin-bottom: 6px;
-         font-weight: 600; }
-input, select { width: 100%; padding: 12px; border: 2px solid #e0e0e0;
-                border-radius: 8px; font-size: 16px; margin-bottom: 12px;
-                -webkit-appearance: none; }
-input:focus, select:focus { border-color: #667eea; outline: none; }
-.btn { display: block; width: 100%; padding: 15px; border: none;
-        border-radius: 10px; font-size: 17px; font-weight: 700;
-        cursor: pointer; text-align: center; margin-bottom: 10px; }
-.btn-camera { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
-.btn-gallery { background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }
-.btn-upload { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff; }
-.btn:disabled { opacity: 0.5; }
-.preview-area { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.preview-item { position: relative; width: 80px; height: 80px;
-                 border-radius: 8px; overflow: hidden; border: 2px solid #e0e0e0; }
-.preview-item img { width: 100%; height: 100%; object-fit: cover; }
-.preview-item .remove { position: absolute; top: -5px; right: -5px;
-                         background: #f5576c; color: #fff; border-radius: 50%;
-                         width: 22px; height: 22px; font-size: 12px;
-                         border: none; cursor: pointer; line-height: 22px;
-                         text-align: center; }
-.status { padding: 12px; border-radius: 8px; margin: 10px 0;
-           font-size: 14px; text-align: center; display: none; }
-.status.success { display: block; background: #d4edda; color: #155724; }
-.status.error { display: block; background: #f8d7da; color: #721c24; }
-.status.uploading { display: block; background: #fff3cd; color: #856404; }
-.file-count { background: #667eea; color: #fff; padding: 4px 10px;
-               border-radius: 12px; font-size: 12px; display: inline-block; }
-.recent-uploads { max-height: 200px; overflow-y: auto; }
-.recent-item { display: flex; align-items: center; padding: 8px 0;
-                border-bottom: 1px solid #f0f0f0; font-size: 13px; }
-.recent-item .icon { width: 35px; height: 35px; background: #f0f0f0;
-                      border-radius: 8px; display: flex; align-items: center;
-                      justify-content: center; margin-right: 10px; font-size: 18px; }
-</style>
-</head><body>
-
-<div class="header">
-  <h1>Document Scanner</h1>
-  <p>विद्युत चोरी रेड — दस्तावेज स्कैन एवं अपलोड</p>
-</div>
-
-<div class="card">
-  <h3>Case ID दर्ज करें</h3>
-  <input type="text" id="caseId" placeholder="Case ID (e.g. RC-20250118-A3F2BC)"
-         value=\"""" + case_id + """\" autocomplete="off">
-</div>
-
-<div class="card">
-  <h3>दस्तावेज श्रेणी चुनें</h3>
-  <select id="category">
-    <option value="checking_report">जाँच रिपोर्ट / Checking Report</option>
-    <option value="inspection_photo">निरीक्षण फोटो / Inspection Photo</option>
-    <option value="application">आवेदन पत्र / Application</option>
-    <option value="notice_served">तामील सूचना / Notice Served</option>
-    <option value="payment_receipt">भुगतान रसीद / Payment Receipt</option>
-    <option value="meter_photo">मीटर फोटो / Meter Photo</option>
-    <option value="site_photo">स्थल फोटो / Site Photo</option>
-    <option value="fir_copy">FIR प्रति / FIR Copy</option>
-    <option value="appeal_document">अपील दस्तावेज / Appeal Document</option>
-    <option value="id_proof">पहचान पत्र / ID Proof</option>
-    <option value="correspondence">पत्राचार / Correspondence</option>
-    <option value="other">अन्य / Other</option>
-  </select>
-</div>
-
-<div class="card">
-  <h3>फोटो / दस्तावेज चुनें</h3>
-
-  <button class="btn btn-camera" onclick="openCamera()">
-    📷 Camera से Scan करें
-  </button>
-
-  <button class="btn btn-gallery" onclick="openGallery()">
-    🖼️ Gallery / Files से चुनें
-  </button>
-
-  <!-- Hidden file inputs -->
-  <input type="file" id="cameraInput" accept="image/*" capture="environment"
-         multiple style="display:none" onchange="handleFiles(this)">
-  <input type="file" id="galleryInput"
-         accept="image/*,.pdf,.doc,.docx" multiple
-         style="display:none" onchange="handleFiles(this)">
-
-  <div class="preview-area" id="previewArea"></div>
-  <div id="fileCount"></div>
-</div>
-
-<div class="card">
-  <label>विवरण / Description (optional)</label>
-  <input type="text" id="description" placeholder="जैसे: मीटर का फोटो, साइट फोटो...">
-
-  <button class="btn btn-upload" id="uploadBtn" onclick="uploadFiles()" disabled>
-    ⬆️ Upload करें
-  </button>
-
-  <div class="status" id="status"></div>
-</div>
-
-<div class="card">
-  <h3>हाल की अपलोड / Recent Uploads</h3>
-  <div class="recent-uploads" id="recentUploads">
-    <p style="color:#999; font-size:13px; text-align:center;">
-      अभी कोई upload नहीं हुई
-    </p>
-  </div>
-</div>
-
-<script>
-const BASE = \"""" + base_url + """\";
-let selectedFiles = [];
-
-function openCamera() {
-    document.getElementById('cameraInput').click();
-}
-
-function openGallery() {
-    document.getElementById('galleryInput').click();
-}
-
-function handleFiles(input) {
-    const files = Array.from(input.files);
-    files.forEach(f => {
-        if (selectedFiles.length < 10) selectedFiles.push(f);
-    });
-    renderPreviews();
-    input.value = '';
-}
-
-function renderPreviews() {
-    const area = document.getElementById('previewArea');
-    area.innerHTML = '';
-    selectedFiles.forEach((f, i) => {
-        const div = document.createElement('div');
-        div.className = 'preview-item';
-        if (f.type.startsWith('image/')) {
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(f);
-            div.appendChild(img);
-        } else {
-            div.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:24px;">📄</div>';
-        }
-        const btn = document.createElement('button');
-        btn.className = 'remove';
-        btn.textContent = '×';
-        btn.onclick = () => { selectedFiles.splice(i, 1); renderPreviews(); };
-        div.appendChild(btn);
-        area.appendChild(div);
-    });
-    document.getElementById('fileCount').innerHTML =
-        selectedFiles.length > 0
-        ? `<span class="file-count">${selectedFiles.length} file(s) selected</span>`
-        : '';
-    document.getElementById('uploadBtn').disabled = selectedFiles.length === 0;
-}
-
-async function uploadFiles() {
-    const caseId = document.getElementById('caseId').value.trim();
-    if (!caseId) {
-        showStatus('error', 'Case ID दर्ज करें!');
-        return;
-    }
-
-    const category = document.getElementById('category').value;
-    const description = document.getElementById('description').value;
-    const btn = document.getElementById('uploadBtn');
-    btn.disabled = true;
-    showStatus('uploading', 'Uploading... कृपया प्रतीक्षा करें...');
-
-    try {
-        const formData = new FormData();
-        selectedFiles.forEach(f => formData.append('files', f));
-        formData.append('category', category);
-        formData.append('description', description);
-        formData.append('uploaded_by', 'mobile');
-
-        const resp = await fetch(`${BASE}/api/cases/${caseId}/upload-multiple`, {
-            method: 'POST',
-            body: formData
-        });
-        const data = await resp.json();
-
-        if (data.ok) {
-            const r = data.data;
-            showStatus('success',
-                `✅ ${r.uploaded} file(s) uploaded successfully!` +
-                (r.failed > 0 ? ` (${r.failed} failed)` : ''));
-            selectedFiles = [];
-            renderPreviews();
-            loadRecent(caseId);
-        } else {
-            showStatus('error', '❌ ' + (data.error || 'Upload failed'));
-        }
-    } catch (e) {
-        showStatus('error', '❌ Network error: ' + e.message);
-    }
-    btn.disabled = false;
-}
-
-function showStatus(type, msg) {
-    const el = document.getElementById('status');
-    el.className = 'status ' + type;
-    el.textContent = msg;
-    if (type === 'success') setTimeout(() => el.style.display = 'none', 5000);
-}
-
-async function loadRecent(caseId) {
-    if (!caseId) return;
-    try {
-        const resp = await fetch(`${BASE}/api/cases/${caseId}/documents`);
-        const data = await resp.json();
-        if (data.ok && data.data.documents.length > 0) {
-            const el = document.getElementById('recentUploads');
-            el.innerHTML = data.data.documents.slice(0, 10).map(d => `
-                <div class="recent-item">
-                    <div class="icon">${d.is_image ? '🖼️' : '📄'}</div>
-                    <div>
-                        <div style="font-weight:600">${d.document_name}</div>
-                        <div style="color:#888;font-size:11px">${d.document_type} • ${(d.file_size/1024).toFixed(1)} KB</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-    } catch(e) {}
-}
-
-// Auto-load recent if case_id is pre-filled
-const initCase = document.getElementById('caseId').value;
-if (initCase) loadRecent(initCase);
-document.getElementById('caseId').addEventListener('blur', function() {
-    loadRecent(this.value.trim());
-});
-</script>
-</body></html>"""
-    return html
-
-
-# ===================================================================
-# GET /mobile/info — Server info for mobile app discovery
-# ===================================================================
 @bp.get("/info")
 def mobile_info():
     """Return server connection info for mobile apps."""
@@ -352,8 +31,459 @@ def mobile_info():
         "server_ip": ip,
         "port": config.PORT,
         "base_url": f"http://{ip}:{config.PORT}",
-        "mobile_url": f"http://{ip}:{config.PORT}/mobile/scan",
-        "upload_endpoint": f"http://{ip}:{config.PORT}/api/cases/<case_id>/upload",
+        "mobile_url": f"http://{ip}:{config.PORT}/mobile",
         "max_upload_mb": config.MAX_UPLOAD_SIZE_MB,
         "categories": config.UPLOAD_CATEGORIES,
     })
+
+
+
+@bp.get("/qr")
+def show_qr():
+    """QR code page — PC pe open karo, phone se scan karo."""
+    ip = _get_local_ip()
+    port = config.PORT
+    mobile_url = f"http://{ip}:{port}/mobile"
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>Mobile Connect — RAID System</title>
+<style>
+body {{ font-family: Arial; text-align: center; padding: 40px; background: #1a1a2e; color: #fff; }}
+.box {{ background: #fff; color: #333; padding: 30px; border-radius: 15px; display: inline-block; margin-top: 20px; }}
+h1 {{ color: #00d4ff; }}
+.url {{ font-size: 18px; background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 15px 0; word-break: break-all; color: #333; }}
+#qrcode {{ margin: 20px auto; }}
+.info {{ color: #aaa; margin-top: 20px; font-size: 14px; }}
+</style></head><body>
+<h1>Mobile App Connect</h1>
+<p>Phone se QR scan karein — poora app phone pe chalega</p>
+<div class="box">
+  <div id="qrcode"></div>
+  <div class="url"><strong>{mobile_url}</strong></div>
+  <p>Server: <strong>{ip}:{port}</strong></p>
+</div>
+<div class="info">
+  <p>Phone aur PC ek hi WiFi par hone chahiye</p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>new QRCode(document.getElementById("qrcode"), {{text:"{mobile_url}",width:256,height:256}});</script>
+</body></html>"""
+    return html
+
+
+
+@bp.get("/")
+@bp.get("/scan")
+@bp.get("/scan/<case_id>")
+def mobile_app(case_id: str = ""):
+    """Full mobile app — Search, Entry, Upload, Dashboard all in one page."""
+    ip = _get_local_ip()
+    base_url = f"http://{ip}:{config.PORT}"
+    return _mobile_html(base_url, case_id)
+
+
+def _mobile_html(base_url: str, case_id: str = "") -> str:
+    return f"""<!DOCTYPE html>
+<html lang="hi"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>RAID System — Mobile</title>
+<link rel="manifest" crossorigin="use-credentials">
+<meta name="theme-color" content="#667eea">
+<style>
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+       background: #f0f2f5; min-height: 100vh; padding-bottom: 70px; }}
+.header {{ background: linear-gradient(135deg, #667eea, #764ba2); color: #fff;
+           padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; }}
+.header h1 {{ font-size: 18px; }}
+.header small {{ opacity: 0.8; font-size: 11px; }}
+
+/* Bottom Navigation */
+.bottom-nav {{ position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+               display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }}
+.nav-item {{ flex: 1; text-align: center; padding: 8px 0; cursor: pointer;
+             font-size: 11px; color: #888; transition: 0.2s; }}
+.nav-item.active {{ color: #667eea; font-weight: 700; }}
+.nav-item .icon {{ font-size: 22px; display: block; }}
+
+/* Pages */
+.page {{ display: none; padding: 15px; }}
+.page.active {{ display: block; }}
+
+/* Cards */
+.card {{ background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px;
+         box-shadow: 0 2px 8px rgba(0,0,0,0.06); }}
+.card h3 {{ font-size: 15px; color: #333; margin-bottom: 10px; }}
+
+/* Form Elements */
+input, select, textarea {{ width: 100%; padding: 11px; border: 2px solid #e8e8e8;
+    border-radius: 8px; font-size: 15px; margin-bottom: 10px; -webkit-appearance: none; }}
+input:focus, select:focus {{ border-color: #667eea; outline: none; }}
+label {{ display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-weight: 600; }}
+
+/* Buttons */
+.btn {{ display: block; width: 100%; padding: 13px; border: none; border-radius: 10px;
+        font-size: 16px; font-weight: 700; cursor: pointer; text-align: center; margin-bottom: 8px; }}
+.btn-primary {{ background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }}
+.btn-success {{ background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }}
+.btn-danger {{ background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }}
+.btn-info {{ background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff; }}
+.btn:disabled {{ opacity: 0.5; }}
+.btn-sm {{ padding: 8px 12px; font-size: 13px; width: auto; display: inline-block; }}
+
+/* Search Results */
+.result-item {{ padding: 12px; border-bottom: 1px solid #f0f0f0; }}
+.result-item:last-child {{ border: none; }}
+.result-item .name {{ font-weight: 700; font-size: 15px; color: #333; }}
+.result-item .detail {{ font-size: 12px; color: #888; margin-top: 3px; }}
+.result-item .badge {{ display: inline-block; padding: 2px 8px; border-radius: 10px;
+                        font-size: 11px; font-weight: 600; }}
+.badge-open {{ background: #fff3cd; color: #856404; }}
+.badge-paid {{ background: #d4edda; color: #155724; }}
+.badge-noticed {{ background: #cce5ff; color: #004085; }}
+
+/* Status messages */
+.msg {{ padding: 10px; border-radius: 8px; margin: 8px 0; font-size: 13px; text-align: center; }}
+.msg-ok {{ background: #d4edda; color: #155724; }}
+.msg-err {{ background: #f8d7da; color: #721c24; }}
+.msg-info {{ background: #fff3cd; color: #856404; }}
+
+/* Preview */
+.preview-area {{ display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }}
+.preview-item {{ width: 70px; height: 70px; border-radius: 8px; overflow: hidden;
+                  border: 2px solid #e0e0e0; position: relative; }}
+.preview-item img {{ width: 100%; height: 100%; object-fit: cover; }}
+
+/* Stats row */
+.stats {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }}
+.stat-box {{ background: #fff; border-radius: 10px; padding: 12px; text-align: center;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.05); }}
+.stat-box .num {{ font-size: 24px; font-weight: 800; color: #667eea; }}
+.stat-box .lbl {{ font-size: 11px; color: #888; }}
+</style></head><body>
+
+<div class="header">
+  <h1>RAID Management System</h1>
+  <small>विद्युत चोरी रेड प्रबंधन — Mobile</small>
+</div>
+
+<!-- ========== PAGE: DASHBOARD ========== -->
+<div class="page active" id="pageDashboard">
+  <div class="stats">
+    <div class="stat-box"><div class="num" id="statOpen">-</div><div class="lbl">Open Cases</div></div>
+    <div class="stat-box"><div class="num" id="statTotal">-</div><div class="lbl">Total Cases</div></div>
+  </div>
+  <div class="card">
+    <h3>Quick Actions</h3>
+    <button class="btn btn-primary" onclick="switchPage('pageSearch')">🔍 Search Consumer / Case</button>
+    <button class="btn btn-success" onclick="switchPage('pageEntry')">➕ New Case Entry</button>
+    <button class="btn btn-info" onclick="switchPage('pageUpload')">📷 Scan & Upload</button>
+  </div>
+  <div class="card">
+    <h3>Recent Cases</h3>
+    <div id="recentCases"><p style="color:#999;text-align:center;font-size:13px;">Loading...</p></div>
+  </div>
+</div>
+
+<!-- ========== PAGE: SEARCH ========== -->
+<div class="page" id="pageSearch">
+  <div class="card">
+    <h3>🔍 Search / खोजें</h3>
+    <input type="text" id="searchQ" placeholder="Name / Account / Case ID / FIR..." autocomplete="off">
+    <div style="display:flex;gap:8px;">
+      <select id="searchStatus" style="flex:1"><option value="">All Status</option>
+        <option value="open">Open</option><option value="noticed">Noticed</option>
+        <option value="paid">Paid</option><option value="closed">Closed</option></select>
+      <select id="searchSection" style="flex:1"><option value="">All Section</option>
+        <option value="135">135</option><option value="138">138</option>
+        <option value="126">126</option></select>
+    </div>
+    <button class="btn btn-primary" onclick="doSearch()">Search करें</button>
+  </div>
+  <div class="card" id="searchResults" style="display:none">
+    <h3>Results</h3>
+    <div id="searchList"></div>
+  </div>
+</div>
+
+<!-- ========== PAGE: CASE ENTRY ========== -->
+<div class="page" id="pageEntry">
+  <div class="card">
+    <h3>➕ New Raid Case Entry</h3>
+    <label>Account Number / खाता संख्या</label>
+    <input type="text" id="entryAccount" placeholder="Account No.">
+    <button class="btn-sm btn-info" onclick="fetchConsumer()">Consumer खोजें</button>
+    <div id="consumerInfo" style="margin:8px 0;font-size:13px;color:#555;"></div>
+  </div>
+  <div class="card">
+    <label>Consumer Name / उपभोक्ता नाम</label>
+    <input type="text" id="entryName">
+    <label>Father Name / पिता नाम</label>
+    <input type="text" id="entryFather">
+    <label>Village / ग्राम</label>
+    <input type="text" id="entryVillage">
+    <label>Mobile</label>
+    <input type="tel" id="entryMobile">
+  </div>
+  <div class="card">
+    <label>Section / धारा</label>
+    <select id="entrySection">
+      <option value="135">135 (Theft)</option>
+      <option value="138">138 (TD)</option>
+      <option value="126">126 (UUE)</option>
+      <option value="Other">Other</option>
+    </select>
+    <label>Inspection Date / निरीक्षण दिनांक</label>
+    <input type="date" id="entryDate">
+    <label>Checking Type</label>
+    <select id="entryCheckType">
+      <option value="Regular">Regular</option>
+      <option value="Vigilance">Vigilance</option>
+      <option value="Other">Other</option>
+    </select>
+    <label>J.E. Name</label>
+    <input type="text" id="entryJE">
+    <label>Connected Load (KW)</label>
+    <input type="number" id="entryLoad" step="0.01">
+  </div>
+  <div class="card">
+    <h3>Devices / उपकरण</h3>
+    <div id="deviceList"></div>
+    <button class="btn-sm btn-info" onclick="addDevice()">+ Device Add करें</button>
+  </div>
+  <div class="card">
+    <button class="btn btn-success" onclick="saveCase()">💾 Case Save करें</button>
+    <div id="entryMsg"></div>
+  </div>
+</div>
+
+<!-- ========== PAGE: UPLOAD ========== -->
+<div class="page" id="pageUpload">
+  <div class="card">
+    <h3>📷 Document Scan & Upload</h3>
+    <label>Case ID</label>
+    <input type="text" id="uploadCaseId" placeholder="RC-XXXXXXXX-XXXXXX" value="{case_id}">
+    <label>Category / श्रेणी</label>
+    <select id="uploadCategory">
+      <option value="checking_report">जाँच रिपोर्ट</option>
+      <option value="inspection_photo">निरीक्षण फोटो</option>
+      <option value="application">आवेदन पत्र</option>
+      <option value="notice_served">तामील सूचना</option>
+      <option value="payment_receipt">भुगतान रसीद</option>
+      <option value="meter_photo">मीटर फोटो</option>
+      <option value="site_photo">स्थल फोटो</option>
+      <option value="fir_copy">FIR प्रति</option>
+      <option value="other">अन्य</option>
+    </select>
+  </div>
+  <div class="card">
+    <button class="btn btn-primary" onclick="document.getElementById('camInput').click()">📷 Camera</button>
+    <button class="btn btn-danger" onclick="document.getElementById('galInput').click()">🖼️ Gallery</button>
+    <input type="file" id="camInput" accept="image/*" capture="environment" multiple style="display:none" onchange="handleUploadFiles(this)">
+    <input type="file" id="galInput" accept="image/*,.pdf,.doc,.docx" multiple style="display:none" onchange="handleUploadFiles(this)">
+    <div class="preview-area" id="uploadPreview"></div>
+    <button class="btn btn-success" id="btnUpload" onclick="doUpload()" disabled>⬆️ Upload</button>
+    <div id="uploadMsg"></div>
+  </div>
+</div>
+
+<!-- Bottom Navigation -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="switchPage('pageDashboard')"><span class="icon">🏠</span>Home</div>
+  <div class="nav-item" onclick="switchPage('pageSearch')"><span class="icon">🔍</span>Search</div>
+  <div class="nav-item" onclick="switchPage('pageEntry')"><span class="icon">➕</span>Entry</div>
+  <div class="nav-item" onclick="switchPage('pageUpload')"><span class="icon">📷</span>Upload</div>
+</div>
+
+<script>
+const BASE = "{base_url}";
+
+// ---- Navigation ----
+function switchPage(id) {{
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((n,i) => {{
+    n.classList.toggle('active', n.getAttribute('onclick')?.includes(id));
+  }});
+  if (id === 'pageDashboard') loadDashboard();
+}}
+
+// ---- Dashboard ----
+async function loadDashboard() {{
+  try {{
+    const r = await fetch(BASE+'/api/cases?page_size=5');
+    const d = await r.json();
+    if (d.ok) {{
+      document.getElementById('statTotal').textContent = d.meta?.total || 0;
+      const cases = d.data || [];
+      const open = cases.filter(c => c.case_status === 'open').length;
+      document.getElementById('statOpen').textContent = d.meta?.total ? '...' : '0';
+      document.getElementById('recentCases').innerHTML = cases.length
+        ? cases.map(c => `<div class="result-item" onclick="viewCase('${{c.case_id}}')">
+            <div class="name">${{c.user_name||c.account_number||c.case_id}}</div>
+            <div class="detail">${{c.section||''}} | ${{c.inspection_date||''}} | ₹${{(c.total_assessment||0).toLocaleString()}}</div>
+            <span class="badge badge-${{c.case_status}}">${{c.case_status}}</span>
+          </div>`).join('')
+        : '<p style="color:#999;text-align:center">No cases yet</p>';
+    }}
+  }} catch(e) {{ console.error(e); }}
+}}
+
+// ---- Search ----
+async function doSearch() {{
+  const q = document.getElementById('searchQ').value.trim();
+  const status = document.getElementById('searchStatus').value;
+  const section = document.getElementById('searchSection').value;
+  if (!q && !status && !section) return;
+
+  let url = BASE+'/api/cases/search?page_size=20';
+  if (q) url += '&q='+encodeURIComponent(q);
+  if (status) url += '&status='+status;
+  if (section) url += '&section='+section;
+
+  const r = await fetch(url);
+  const d = await r.json();
+  const box = document.getElementById('searchResults');
+  const list = document.getElementById('searchList');
+  box.style.display = 'block';
+
+  if (d.ok && d.data.length > 0) {{
+    list.innerHTML = d.data.map(c => `<div class="result-item" onclick="viewCase('${{c.case_id}}')">
+      <div class="name">${{c.user_name||c.account_number||c.case_id}}</div>
+      <div class="detail">A/c: ${{c.account_number||'-'}} | ${{c.section}} | ${{c.inspection_date||''}}</div>
+      <div class="detail">Village: ${{c.user_address||'-'}} | ₹${{(c.total_assessment||0).toLocaleString()}}</div>
+      <span class="badge badge-${{c.case_status}}">${{c.case_status}}</span>
+    </div>`).join('');
+  }} else {{
+    list.innerHTML = '<p style="color:#999;text-align:center">कोई result नहीं मिला</p>';
+  }}
+}}
+
+function viewCase(caseId) {{
+  alert('Case: ' + caseId + '\\n\\nFull case view coming soon!\\nFilhaal /api/cases/'+caseId+' se data mil jayega.');
+}}
+
+// ---- Consumer Fetch ----
+async function fetchConsumer() {{
+  const acct = document.getElementById('entryAccount').value.trim();
+  if (!acct) return;
+  try {{
+    const r = await fetch(BASE+'/api/consumers/'+encodeURIComponent(acct));
+    const d = await r.json();
+    if (d.ok && d.data.consumer) {{
+      const c = d.data.consumer;
+      document.getElementById('entryName').value = c.name || '';
+      document.getElementById('entryFather').value = c.father_name || '';
+      document.getElementById('entryVillage').value = c.village || '';
+      document.getElementById('entryMobile').value = c.mobile || '';
+      document.getElementById('entryLoad').value = c.load_value || '';
+      document.getElementById('consumerInfo').innerHTML =
+        '<span class="msg msg-ok">✅ Consumer found: '+c.name+'</span>';
+    }} else {{
+      document.getElementById('consumerInfo').innerHTML =
+        '<span class="msg msg-info">Consumer DB mein nahi mila — manually bharo</span>';
+    }}
+  }} catch(e) {{ console.error(e); }}
+}}
+
+// ---- Devices ----
+let devices = [];
+function addDevice() {{
+  devices.push({{name:'',L:0,F:1,H:8,D:365}});
+  renderDevices();
+}}
+function renderDevices() {{
+  document.getElementById('deviceList').innerHTML = devices.map((d,i) => `
+    <div style="background:#f8f9fa;padding:8px;border-radius:8px;margin-bottom:6px;font-size:13px;">
+      <input placeholder="Device name" value="${{d.name}}" onchange="devices[${{i}}].name=this.value" style="margin-bottom:4px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;">
+        <input type="number" placeholder="L(W)" value="${{d.L}}" onchange="devices[${{i}}].L=+this.value">
+        <input type="number" placeholder="F" value="${{d.F}}" step="0.1" onchange="devices[${{i}}].F=+this.value">
+        <input type="number" placeholder="H" value="${{d.H}}" onchange="devices[${{i}}].H=+this.value">
+        <input type="number" placeholder="D" value="${{d.D}}" onchange="devices[${{i}}].D=+this.value">
+      </div>
+    </div>`).join('');
+}}
+
+// ---- Save Case ----
+async function saveCase() {{
+  const payload = {{
+    account_number: document.getElementById('entryAccount').value.trim(),
+    name: document.getElementById('entryName').value.trim(),
+    father_name: document.getElementById('entryFather').value.trim(),
+    village: document.getElementById('entryVillage').value.trim(),
+    mobile: document.getElementById('entryMobile').value.trim(),
+    user_name: document.getElementById('entryName').value.trim(),
+    user_father: document.getElementById('entryFather').value.trim(),
+    section: document.getElementById('entrySection').value,
+    inspection_date: document.getElementById('entryDate').value,
+    checking_type: document.getElementById('entryCheckType').value,
+    je_name: document.getElementById('entryJE').value.trim(),
+    connected_load_kw: parseFloat(document.getElementById('entryLoad').value) || 0,
+    devices: devices.filter(d => d.name && d.L > 0),
+    created_by: 'mobile',
+  }};
+
+  try {{
+    const r = await fetch(BASE+'/api/cases', {{
+      method: 'POST',
+      headers: {{'Content-Type':'application/json'}},
+      body: JSON.stringify(payload)
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      const cid = d.data.case.case_id;
+      document.getElementById('entryMsg').innerHTML =
+        `<div class="msg msg-ok">✅ Case saved: ${{cid}}<br>Assessment: ₹${{(d.data.case.total_assessment||0).toLocaleString()}}</div>`;
+      document.getElementById('uploadCaseId').value = cid;
+    }} else {{
+      document.getElementById('entryMsg').innerHTML =
+        `<div class="msg msg-err">❌ ${{d.error||'Save failed'}}</div>`;
+    }}
+  }} catch(e) {{
+    document.getElementById('entryMsg').innerHTML = `<div class="msg msg-err">❌ ${{e.message}}</div>`;
+  }}
+}}
+
+// ---- Upload ----
+let uploadFiles = [];
+function handleUploadFiles(input) {{
+  Array.from(input.files).forEach(f => {{ if(uploadFiles.length<10) uploadFiles.push(f); }});
+  renderUploadPreviews();
+  input.value = '';
+}}
+function renderUploadPreviews() {{
+  const area = document.getElementById('uploadPreview');
+  area.innerHTML = uploadFiles.map((f,i) => {{
+    if (f.type.startsWith('image/'))
+      return `<div class="preview-item"><img src="${{URL.createObjectURL(f)}}"></div>`;
+    return `<div class="preview-item" style="display:flex;align-items:center;justify-content:center;font-size:20px;">📄</div>`;
+  }}).join('');
+  document.getElementById('btnUpload').disabled = uploadFiles.length === 0;
+}}
+async function doUpload() {{
+  const caseId = document.getElementById('uploadCaseId').value.trim();
+  if (!caseId) {{ document.getElementById('uploadMsg').innerHTML='<div class="msg msg-err">Case ID bharo!</div>'; return; }}
+  const fd = new FormData();
+  uploadFiles.forEach(f => fd.append('files', f));
+  fd.append('category', document.getElementById('uploadCategory').value);
+  fd.append('uploaded_by', 'mobile');
+  document.getElementById('uploadMsg').innerHTML='<div class="msg msg-info">Uploading...</div>';
+  try {{
+    const r = await fetch(BASE+'/api/cases/'+caseId+'/upload-multiple', {{method:'POST',body:fd}});
+    const d = await r.json();
+    if (d.ok) {{
+      document.getElementById('uploadMsg').innerHTML=`<div class="msg msg-ok">✅ ${{d.data.uploaded}} files uploaded!</div>`;
+      uploadFiles = []; renderUploadPreviews();
+    }} else {{
+      document.getElementById('uploadMsg').innerHTML=`<div class="msg msg-err">❌ ${{d.error}}</div>`;
+    }}
+  }} catch(e) {{ document.getElementById('uploadMsg').innerHTML=`<div class="msg msg-err">❌ ${{e.message}}</div>`; }}
+}}
+
+// ---- Init ----
+document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+loadDashboard();
+</script>
+</body></html>"""
