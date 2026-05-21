@@ -44,6 +44,42 @@ TIMELINE_SECTION_5_DISPATCH: int = 90
 # Slab boundaries (default; rate_master can override)
 DEFAULT_SLAB_BOUNDARIES = [(0, 100), (101, 200), (201, None)]
 
+# ---- Mobile Upload / Scan settings ------------------------------------
+UPLOADS_DIR: Path = ROOT_DIR / "uploads"
+MAX_UPLOAD_SIZE_MB: int = int(os.environ.get("RAID_MAX_UPLOAD_MB", "15"))
+MAX_UPLOAD_SIZE_BYTES: int = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+ALLOWED_UPLOAD_EXTENSIONS: set[str] = {
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",  # images (scanned docs)
+    ".pdf",                                              # PDF documents
+    ".doc", ".docx",                                     # Word documents
+    ".tiff", ".tif",                                     # scanned TIFF
+}
+
+ALLOWED_MIME_TYPES: set[str] = {
+    "image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp",
+    "image/tiff",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+# Document categories for upload classification
+UPLOAD_CATEGORIES: list[str] = [
+    "checking_report",       # जाँच रिपोर्ट
+    "inspection_photo",      # निरीक्षण फोटो
+    "application",           # आवेदन पत्र
+    "notice_served",         # तामील सूचना (served notice scan)
+    "payment_receipt",       # भुगतान रसीद
+    "meter_photo",           # मीटर फोटो
+    "site_photo",            # स्थल फोटो
+    "fir_copy",              # FIR प्रति
+    "appeal_document",       # अपील दस्तावेज
+    "id_proof",              # पहचान पत्र
+    "correspondence",        # पत्राचार
+    "other",                 # अन्य
+]
+
 # Ensure runtime folders exist
-for _dir in (MASTER_DATA_DIR, TEMPLATES_DIR, DOCS_DIR, BACKUP_DIR, LOGS_DIR):
+for _dir in (MASTER_DATA_DIR, TEMPLATES_DIR, DOCS_DIR, BACKUP_DIR, LOGS_DIR, UPLOADS_DIR):
     _dir.mkdir(parents=True, exist_ok=True)
