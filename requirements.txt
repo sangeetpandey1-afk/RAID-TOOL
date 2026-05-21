@@ -20,6 +20,9 @@ rapidfuzz==3.9.6
 python-dateutil==2.9.0.post0
 
 # Optional: Google Drive backup (Phase 4)
+# Uncomment these three lines if you want backups uploaded to Google Drive.
+# When commented out the local zip backup still works; the Drive upload is
+# simply skipped with a clear "google libs not installed" reason.
 # google-api-python-client==2.140.0
 # google-auth-httplib2==0.2.0
 # google-auth-oauthlib==1.2.1

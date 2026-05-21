@@ -118,10 +118,10 @@ Mandatory reminder text on Deposit Slip:
 Multi-parameter: Account, Name, Address, FIR, Division, Checking number. Date range max 15 days. Status, division, officer, amount filters.
 
 ## Phase Plan
-- **Phase 1 (Wk 1–2):** DB schema, master-data import, Flask APIs, Excel skeleton
-- **Phase 2 (Wk 3–4):** Offense detection, LFHD calc, template system, provisional notice generation
-- **Phase 3 (Wk 5–6):** Payment, notice timeline, inquiry, search
-- **Phase 4 (Wk 7–8):** Google Drive backup, reporting, optimization, training
+- **Phase 1 (Wk 1–2):** DB schema, master-data import, Flask APIs, Excel skeleton — ✅ DONE
+- **Phase 2 (Wk 3–4):** Offense detection, LFHD calc, template system, provisional notice generation — ✅ DONE
+- **Phase 3 (Wk 5–6):** Payment, notice timeline, inquiry, search — ✅ DONE
+- **Phase 4 (Wk 7–8):** Google Drive backup, reporting, optimization, training — ✅ DONE
 
 ## Current Status (when handed off to Kiro)
 - Excel UI: 95% — RaidSystem.xlsm with VBA macros, LFHD calculations, slab billing
@@ -130,6 +130,19 @@ Multi-parameter: Account, Name, Address, FIR, Division, Checking number. Date ra
 - API comm: 85%
 - **Master Data Import: 60% — BUG: HTTP 500 on `/api/import_all_master_data` (column mapping mismatch)** ← Top priority fix
 - Document Generation: 0%
+
+## Final Status (after Kiro implementation)
+- Excel VBA frontend: ✅ 15 modules + starter `RaidSystem.xlsx` (9 sheets, 20 named ranges)
+- Python backend: ✅ 55 routes across 11 blueprints (health, master, consumer, case, document, payment, inquiry, notice, device_rate, backup, reports)
+- Database: ✅ 16 tables, 20+ indexes, online-backup-API safe snapshots
+- API comm: ✅ uniform `{ ok, data, meta }` envelope, global JSON error handler
+- Master Data Import: ✅ structured ImportReport, per-row error isolation, English/Hindi/Krutidev column tolerance
+- Document Generation: ✅ 9 default `.docx` templates with `{{ FIELD }}` placeholders + autogen fallback
+- Section 152 Compounding: ✅ per-KW-or-part-thereof round-UP rule with auto Hindi justification
+- Offense Detection: ✅ 4-level priority (account / SC / mapping / fuzzy)
+- Backup: ✅ local zip (DB online-backup + master_data + docs) + optional Google Drive
+- Reports: ✅ cases.xlsx, payments.xlsx, notices.xlsx, dashboard.pdf
+- Smoke test: ✅ 15/15 green via `bash scripts/smoke_test.sh`
 
 ## User Environment
 - Windows 11 Pro, Ryzen 5 5300G, 8 GB RAM
