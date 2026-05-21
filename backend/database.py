@@ -71,8 +71,40 @@ def init_schema() -> None:
     with standalone_connection() as conn:
         conn.executescript(sql)
     log.info("Schema initialized at %s", DB_PATH)
+    _migrate_add_columns()
     _seed_devices_if_empty()
     _seed_config_if_empty()
+
+
+# ------------------------------------------------------------------ migration
+# SQLite can't use "ADD COLUMN IF NOT EXISTS", so we check via PRAGMA.
+_NEW_COLUMNS: dict[str, list[tuple[str, str]]] = {
+    # table -> [(column_name, sql_type_with_default), ...]
+    "raid_cases": [
+        ("dispatch_number",        "TEXT"),
+        ("dispatch_date",          "TEXT"),
+        ("checking_report_number", "TEXT"),
+        ("hearing_date",           "TEXT"),
+        ("hearing_time",           "TEXT"),
+    ],
+}
+
+
+def _migrate_add_columns() -> None:
+    """Add new columns to existing tables (idempotent, safe on re-run)."""
+    with standalone_connection() as conn:
+        for table, cols in _NEW_COLUMNS.items():
+            existing = {r["name"] for r in
+                        conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            for col_name, col_type in cols:
+                if col_name not in existing:
+                    try:
+                        conn.execute(
+                            f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"
+                        )
+                        log.info("Migrated: %s.%s added", table, col_name)
+                    except Exception:  # noqa: BLE001
+                        log.exception("Migration failed for %s.%s", table, col_name)
 
 
 # ------------------------------------------------------------------ seed
@@ -140,6 +172,7 @@ def _seed_devices_if_empty() -> None:
 
 
 DEFAULT_CONFIG: dict[str, str] = {
+    # Business rules
     "multiplier_first_offense":  "2",
     "multiplier_repeat_offense": "6",
     "repeat_offense_threshold":  "2",
@@ -150,6 +183,22 @@ DEFAULT_CONFIG: dict[str, str] = {
     "timeline_section_3_dispatch":  "45",
     "timeline_section_5_dispatch":  "90",
     "ed_default_percent":           "5",
+    # Office identity (used in provisional notice header) — UPPCL/PVVNL defaults
+    "office_phone":          "9193330910",
+    "office_email":          "xenoon.shamli@pvvnl.org",
+    "office_division_no":    "20",
+    "office_name_en":        "Executive Engineer",
+    "office_name_hi":        "अधिशासी अभियन्ता",
+    "office_dept_en":        "Electricity Distribution Division",
+    "office_dept_hi":        "विद्युत वितरण",
+    "office_location_en":    "Oon, Shamli",
+    "office_location_hi":    "ऊन, शामली",
+    "patrank_letter_code":   "वि0वि0ख0प्र0/शा0 एसैस्मेन्ट वि .",
+    "hearing_officer_address_hi":
+        "अधिशासी अभियन्ता, विद्युत वितरण खण्ड–ऊन, खेड़ी करमू कैराना रोड, शामली।",
+    # Logo / seal paths (optional, future)
+    "office_logo_path":      "",
+    "office_seal_path":      "",
 }
 
 

@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 KIND_TO_TEMPLATE: dict[str, str] = {
     "provisional_consumer": "provisional_consumer.docx",
     "provisional_office":   "provisional_office.docx",
+    "provisional_pvvnl":    "provisional_pvvnl.docx",  # exact PVVNL/UPPCL format
     "section3":             "section3_notice.docx",
     "section5":             "section5_notice.docx",
     "thanedari":            "thanedari_copy.docx",
@@ -79,6 +80,9 @@ def build_context(case: dict, consumer: dict | None,
     slabs = energy.get("slabs") or []
 
     today_iso = date.today().isoformat()
+
+    # Load office config from system_config (cached per-call)
+    cfg = _load_office_config()
 
     ctx: dict[str, Any] = {
         # ---- Core
@@ -184,9 +188,48 @@ def build_context(case: dict, consumer: dict | None,
         ctx[f"SLAB_{i}_AMOUNT"] = _money(s.get("amount"))
     ctx["slabs"] = slabs
 
+    # ---- Office identity (from system_config) — for PVVNL provisional notice
+    ctx.update({
+        "OFFICE_PHONE":     cfg.get("office_phone", ""),
+        "OFFICE_EMAIL":     cfg.get("office_email", ""),
+        "OFFICE_DIV_NO":    cfg.get("office_division_no", "") or cons.get("div_code", ""),
+        "OFFICE_NAME_EN":   cfg.get("office_name_en", "Executive Engineer"),
+        "OFFICE_NAME_HI":   cfg.get("office_name_hi", "अधिशासी अभियन्ता"),
+        "OFFICE_DEPT_EN":   cfg.get("office_dept_en", "Electricity Distribution Division"),
+        "OFFICE_DEPT_HI":   cfg.get("office_dept_hi", "विद्युत वितरण"),
+        "OFFICE_LOC_EN":    cfg.get("office_location_en", ""),
+        "OFFICE_LOC_HI":    cfg.get("office_location_hi", ""),
+        "PATRANK_LETTER_CODE": cfg.get("patrank_letter_code", "वि0वि0ख0प्र0/शा0 एसैस्मेन्ट वि ."),
+        "HEARING_OFFICER_ADDRESS_HI":
+            cfg.get("hearing_officer_address_hi", ""),
+    })
+
+    # ---- Dispatch tracking fields (पत्रांक header)
+    ctx.update({
+        "DISPATCH_NUMBER":        case.get("dispatch_number") or extra.get("dispatch_number") or "",
+        "DISPATCH_DATE":          case.get("dispatch_date")   or extra.get("dispatch_date")   or today_iso,
+        "CHECKING_REPORT_NUMBER": case.get("checking_report_number")
+                                  or extra.get("checking_report_number") or "",
+        "HEARING_DATE":           case.get("hearing_date") or extra.get("hearing_date") or "",
+        "HEARING_TIME":           case.get("hearing_time") or extra.get("hearing_time") or "",
+    })
+
     # Allow caller-supplied overrides last
     ctx.update(extra)
     return ctx
+
+
+def _load_office_config() -> dict:
+    """Load the office_* config keys from system_config table."""
+    try:
+        rows = fetch_all(
+            "SELECT config_key, config_value FROM system_config "
+            "WHERE config_key LIKE 'office_%' OR config_key='patrank_letter_code' "
+            "   OR config_key='hearing_officer_address_hi'"
+        )
+        return {r["config_key"]: r["config_value"] for r in rows}
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 # ===================================================================
@@ -490,9 +533,325 @@ def _autogen_noc(out: Path, ctx: dict) -> None:
     doc.save(str(out))
 
 
+# =====================================================================
+# PVVNL / UPPCL Provisional Notice — EXACT FORMAT
+# =====================================================================
+def _fmt_dmy(iso_date: str | None) -> str:
+    """Convert ISO yyyy-mm-dd to dd/mm/yyyy."""
+    if not iso_date:
+        return ""
+    try:
+        dt = datetime.strptime(str(iso_date)[:10], "%Y-%m-%d")
+        return dt.strftime("%d/%m/%Y")
+    except (ValueError, TypeError):
+        return str(iso_date)
+
+
+def _build_lfhd_block(devices: list, assessment: dict) -> list[str]:
+    """
+    Build the LFHD calculation block exactly as in the PVVNL notice format:
+        LFHD .963*1.00*18*365 =6327
+        Total Unit=6327KWH
+        EC 5.5*2*6327=69597.00
+        FIXD 1*110 *2*12 =2640.00
+        ED 7.5%@ =5418.00
+        Tatal assessment=77655.00
+    """
+    lines = []
+    total_units = 0.0
+
+    for d in devices:
+        load_w = safe_float(d.get("L") or d.get("load"))
+        load_kw = round(load_w / 1000.0, 4) if load_w >= 1 else load_w
+        # If load is already given as KW (e.g. 0.963), don't divide
+        if load_w < 1 and load_w > 0:
+            load_kw = load_w
+        f_val = safe_float(d.get("F") or d.get("factor") or 1)
+        h_val = safe_float(d.get("H") or d.get("hours"))
+        d_val = safe_float(d.get("D") or d.get("days"))
+        units = safe_float(d.get("units"))
+        if units == 0 and load_kw > 0:
+            units = round(load_kw * f_val * h_val * d_val, 2)
+        total_units += units
+
+        # Format: LFHD .963*1.00*18*365 =6327
+        load_str = f"{load_kw:g}" if load_kw < 1 else f"{load_kw:g}"
+        f_str = f"{f_val:.2f}" if f_val != int(f_val) else f"{int(f_val)}.00"
+        lines.append(
+            f"LFHD {load_str}*{f_str}*{int(h_val) if h_val == int(h_val) else h_val}*"
+            f"{int(d_val) if d_val == int(d_val) else d_val} ={int(units) if units == int(units) else units:g}"
+        )
+
+    lines.append(f"Total Unit={int(total_units) if total_units == int(total_units) else round(total_units,2)}KWH")
+    lines.append("")  # blank line
+
+    a = assessment or {}
+    energy = a.get("energy_charges") or {}
+    fixed = a.get("fixed_charges") or {}
+    ed = a.get("electricity_duty") or {}
+    multiplier = safe_float(a.get("multiplier", 2))
+    slabs = energy.get("slabs") or []
+
+    # EC lines (one per slab) — format: rate*multiplier*units=amount
+    for s in slabs:
+        rate = safe_float(s.get("rate"))
+        units = safe_float(s.get("yearly_units") or s.get("monthly_units"))
+        amt = safe_float(s.get("amount"))
+        rate_str = f"{rate:g}"
+        if units > 0:
+            lines.append(f"EC {rate_str}*{multiplier:g}*{int(units) if units == int(units) else units:g}={amt:.2f}")
+        else:
+            lines.append(f"{rate_str}*{multiplier:g}*=0.00")
+
+    # FIXD line: load*fixed_rate*multiplier*months = base*multiplier
+    cload_kw = safe_float(fixed.get("connected_load_kw"))
+    fixed_rate = safe_float(fixed.get("fixed_rate"))
+    months = safe_float(fixed.get("months"))
+    fixed_final = safe_float(fixed.get("final"))
+    months_int = int(round(months)) if months else 12
+    cload_str = f"{cload_kw:g}" if cload_kw else "0"
+    lines.append(
+        f"FIXD {cload_str}*{fixed_rate:g} *{multiplier:g}*{months_int} ={fixed_final:.2f}"
+    )
+
+    # ED line
+    ed_pct = safe_float(ed.get("ed_percent"))
+    ed_amt = safe_float(ed.get("amount"))
+    lines.append(f"ED {ed_pct:g}%@ ={ed_amt:.2f}")
+
+    # Total
+    grand = safe_float(a.get("grand_total"))
+    lines.append(f"Tatal assessment={grand:.2f}")
+
+    return lines
+
+
+def _autogen_provisional_pvvnl(out: Path, ctx: dict) -> None:
+    """
+    Generate provisional notice in EXACT PVVNL/UPPCL format matching
+    the user-supplied template (Shamli Division image).
+    """
+    from docx.shared import Inches
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
+    doc = Document()
+
+    # Page margins
+    sec = doc.sections[0]
+    sec.top_margin = Cm(1.5)
+    sec.bottom_margin = Cm(1.5)
+    sec.left_margin = Cm(2)
+    sec.right_margin = Cm(2)
+
+    # ============ HEADER ROW (3 cols: contact / logo / office) ============
+    hdr_tbl = doc.add_table(rows=1, cols=3)
+    hdr_tbl.autofit = False
+    hdr_left = hdr_tbl.rows[0].cells[0]
+    hdr_mid  = hdr_tbl.rows[0].cells[1]
+    hdr_right = hdr_tbl.rows[0].cells[2]
+
+    # Left: phone + email
+    hl = hdr_left.paragraphs[0]
+    hl.add_run(f"☎ {ctx.get('OFFICE_PHONE','')}\n").font.size = Pt(10)
+    hl.add_run(f"✉ {ctx.get('OFFICE_EMAIL','')}").font.size = Pt(10)
+
+    # Middle: placeholder for logo (centered text instead since no image)
+    hm = hdr_mid.paragraphs[0]
+    hm.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    seal_run = hm.add_run("⚡")
+    seal_run.font.size = Pt(28)
+    seal_run.bold = True
+
+    # Right: office name in Hindi/English
+    hr = hdr_right.paragraphs[0]
+    hr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r1 = hr.add_run("कार्यालय\n")
+    r1.font.size = Pt(10)
+    r2 = hr.add_run(f"Office of the\n")
+    r2.font.size = Pt(10)
+    r3 = hr.add_run(f"{ctx.get('OFFICE_NAME_HI','अधिशासी अभियन्ता')}\n")
+    r3.font.size = Pt(11); r3.bold = True
+    r4 = hr.add_run(f"{ctx.get('OFFICE_NAME_EN','Executive Engineer')}\n")
+    r4.font.size = Pt(10); r4.bold = True
+    r5 = hr.add_run(f"{ctx.get('OFFICE_DEPT_HI','विद्युत वितरण')}\n")
+    r5.font.size = Pt(10)
+    r6 = hr.add_run(
+        f"{ctx.get('OFFICE_DEPT_EN','Electricity Distribution Division')} "
+        f"–{ctx.get('OFFICE_LOC_EN','')}\n"
+    )
+    r6.font.size = Pt(10)
+    r7 = hr.add_run(f"{ctx.get('OFFICE_LOC_HI','')}")
+    r7.font.size = Pt(10); r7.bold = True
+
+    # Div No.
+    p = doc.add_paragraph()
+    p.add_run(f"Div No.- {ctx.get('OFFICE_DIV_NO', ctx.get('Div_no',''))}").bold = True
+
+    # ============ पत्रांक line ============
+    p = doc.add_paragraph()
+    pr = p.add_run(
+        f"पत्रांक    {ctx.get('DISPATCH_NUMBER','')}      "
+        f"/{ctx.get('PATRANK_LETTER_CODE','')} {ctx.get('CHECKING_REPORT_NUMBER','')}                  "
+        f"दिनांक: {_fmt_dmy(ctx.get('DISPATCH_DATE'))}"
+    )
+    pr.font.size = Pt(10); pr.bold = True
+
+    doc.add_paragraph("")
+
+    # ============ Heading box: "प्रस्तावित राजस्व निर्धारण की नोटिस" ============
+    box_tbl = doc.add_table(rows=1, cols=3)
+    box_tbl.autofit = False
+    box_tbl.rows[0].cells[0].text = ""
+    bm = box_tbl.rows[0].cells[1]
+    bp = bm.paragraphs[0]
+    bp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    br = bp.add_run("प्रस्तावित राजस्व निर्धारण की नोटिस")
+    br.bold = True; br.font.size = Pt(14)
+    # Right cell — पंजीकृत डाक stamp
+    bright = box_tbl.rows[0].cells[2]
+    bright_p = bright.paragraphs[0]
+    bright_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    br2 = bright_p.add_run("पंजीकृत डाक")
+    br2.bold = True; br2.font.size = Pt(11)
+
+    # ============ विषय (Subject) ============
+    insp_dmy = _fmt_dmy(ctx.get('dis_date'))
+    p = doc.add_paragraph()
+    sb = p.add_run("विषय – ")
+    sb.bold = True
+    p.add_run(
+        f"दिनांक {insp_dmy} के निरीक्षण में पायी गयी अनियमितता के सन्दर्भ में "
+        f"विद्युत अधिनियम, 2003 की धारा {ctx.get('SECTION','')} के अधीन "
+        f"इलेक्ट्रिसिटी सप्लाई कोड–2005 के आलोक में प्रस्तावित राजस्व निर्धारण की नोटिस।"
+    )
+
+    # ============ महोदय,
+    doc.add_paragraph("महोदय,")
+
+    p = doc.add_paragraph()
+    p.add_run(
+        f"           आप अवगत ही होंगे कि दिनांक {insp_dmy} को आपके परिसर स्थापित विद्युत संयोजन का "
+        f"निरीक्षण किया गया था जिसका विवरण निम्नवत है।"
+    )
+
+    # ============ Consumer details block (2 columns) ============
+    cd_tbl = doc.add_table(rows=4, cols=2)
+    cd_tbl.autofit = False
+    rows_data = [
+        (f"उपयोगकर्ता-श्री {ctx.get('USER_NAME','')} पुत्र {ctx.get('USERS_FATHER','')}",
+         f"संयोजन संख्या -{ctx.get('ACCOUNT_ID','')}"),
+        (f"संयोजन/परिसर स्वामी का नाम –श्री/श्रीमती-{ctx.get('NAME','')}",
+         f"स्वीकृतभार – {ctx.get('CONNECTION_LOAD','')}"),
+        (f"संयोजन/परिसर स्वामी के पिता/पति का नाम-{ctx.get('father_nane','')}",
+         f"विद्या-{ctx.get('CATEGORY','')}"),
+        (f"पता-{ctx.get('VILLAGE','')} पोस्ट-{ctx.get('post','')}",
+         f"मो0नं0– {ctx.get('MOBILE_NO','')}"),
+    ]
+    for i, (l, r) in enumerate(rows_data):
+        cd_tbl.rows[i].cells[0].text = l
+        cd_tbl.rows[i].cells[1].text = r
+    pin_p = doc.add_paragraph()
+    pin_p.add_run(f"पिन कोड-{ctx.get('pin_code','')}")
+
+    # ============ Body legal text ============
+    section = ctx.get('SECTION', '135')
+    p = doc.add_paragraph()
+    p.add_run(
+        f"           उक्त निरीक्षण में विद्युत अधिनियम, 2003 की धारा {section}/138/अन्य "
+        f"के अंतर्गत दोषी पाए गए। जांचोपरांत आप द्वारा मौके पर शमन शुल्क जमा नहीं कराया गया है। "
+        f"अतः आपके विरुद्ध प्रथमिकी भी दर्ज कराया जा चुका है।"
+    )
+
+    p = doc.add_paragraph()
+    grand_str = ctx.get('ASSESMENT_TOTAL', '0.00')
+    p.add_run(
+        f"           अग्रेत्तर आपको अवगत कराना है कि इलेक्ट्रिसिटी सप्लाई कोड–2005 के आलोक में "
+        f"उक्त अनियमितता पर प्रस्तावित राजस्व निर्धारण रू0 {grand_str} है। "
+        f"आप उक्त प्रस्तावित राजस्व निर्धारण से संतुष्ट हैं, तो 7 दिनों के अंदर रू0 {grand_str} "
+        f"जमा करना सुनिश्चित करे। यदि उक्त निर्धारण से संतुष्ट नहीं हैं, तो अपना दृष्टिकोण पूर्ण "
+        f"आकार के कागज पर दो प्रतियों में साफ-साफ लिखकर सम्यक रूप से हस्ताक्षरित, साक्ष्य सामग्री "
+        f"सहित 15 दिनों के अन्दर आप या किसी अन्य अधिकृत करते हुए, राजस्व निर्धारण अधिकारी "
+        f"(खण्ड कार्यालय में ) को प्रस्तुत करे, अन्यथा प्रस्तावित राजस्व निर्धारण पर अग्रेत्तर "
+        f"नियमानुसार कार्यवाही करते हुए राजस्व निर्धारण किया जायेगा। आपकी सुविधा हेतु आपका पक्ष "
+        f"प्रस्तुत करने हेतु निम्नांकित तिथि निर्धारित की जाती है।"
+    )
+
+    # ============ Hearing officer + date/time ============
+    p = doc.add_paragraph()
+    p.add_run("सुनवाई हेतु अधिकृत अधिकारी का पदनाम एवं पता:- ").bold = True
+    p.add_run(f"  {ctx.get('HEARING_OFFICER_ADDRESS_HI','')}")
+
+    hearing_dmy = _fmt_dmy(ctx.get('HEARING_DATE')) or "—"
+    hearing_time = ctx.get('HEARING_TIME') or "—"
+    p = doc.add_paragraph()
+    p.add_run("निर्धारित तिथि– ").bold = True
+    p.add_run(f"{hearing_dmy}                समय– {hearing_time}")
+
+    p = doc.add_paragraph()
+    p.add_run(
+        "             यदि आपके द्वारा निर्धारित तिथि या 15 दिनों तक अपना प्रत्यावेदन/पक्ष प्रस्तुत नहीं "
+        "किया जाता है तो प्रकरण का निस्तारण नियमानुसार आपके पक्ष की अनुपस्थिति में किया जायेगा। "
+        "जिसका सम्पूर्ण उत्तरदायित्व आपका होगा।"
+    )
+
+    p = doc.add_paragraph()
+    nr = p.add_run("नोट –: ")
+    nr.bold = True
+    p.add_run("राजस्व निर्धारण के अतिरिक्त शमन शुल्क नियमानुसार देय होगा ।")
+
+    # ============ LFHD calculation block ============
+    p = doc.add_paragraph()
+    p.add_run("प्रस्तावित राजस्व निर्धारण की गणना निम्न प्रकार हैः–").bold = True
+
+    # Build LFHD lines
+    devices = ctx.get("devices") or []
+    # Need assessment dict — reconstruct from ctx fields if possible
+    assessment = {
+        "energy_charges": {
+            "slabs": ctx.get("slabs") or [],
+            "final": safe_float(ctx.get("FINAL_ENERGY_CHARGES", "0").replace(",", "")),
+        },
+        "fixed_charges": {
+            "connected_load_kw": safe_float(ctx.get("CONNECTED_LOAD") or 0),
+            "fixed_rate":  safe_float(str(ctx.get("FIXED_RATE","0")).replace(",", "")),
+            "months":      safe_float(ctx.get("MONTHS") or 12),
+            "final":       safe_float(str(ctx.get("FINAL_FIXED_CHARGES","0")).replace(",", "")),
+        },
+        "electricity_duty": {
+            "ed_percent": safe_float(ctx.get("ED_RATE_PERCENT") or 0),
+            "amount":     safe_float(str(ctx.get("FINAL_ED_CHARGES","0")).replace(",", "")),
+        },
+        "multiplier": 2,
+        "grand_total": safe_float(str(ctx.get("ASSESMENT_TOTAL","0")).replace(",", "")),
+    }
+    lines = _build_lfhd_block(devices, assessment)
+    for line in lines:
+        lp = doc.add_paragraph()
+        run = lp.add_run(line)
+        run.font.name = "Courier New"
+        run.font.size = Pt(10)
+
+    # ============ Signature block ============
+    doc.add_paragraph("")
+    sig_tbl = doc.add_table(rows=2, cols=2)
+    sig_tbl.rows[0].cells[0].text = ""
+    sig_right = sig_tbl.rows[0].cells[1]
+    sr_p = sig_right.paragraphs[0]
+    sr_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    sr_run = sr_p.add_run(f"{ctx.get('OFFICE_NAME_HI','अधिशासी अभियन्ता')}/निर्धारण अधिकारी")
+    sr_run.bold = True
+    sr2 = sig_tbl.rows[1].cells[1].paragraphs[0]
+    sr2.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    sr2.add_run("O/C").bold = True
+
+    doc.save(str(out))
+
+
 _AUTOGEN_HANDLERS = {
     "provisional_consumer": _autogen_provisional_consumer,
     "provisional_office":   _autogen_provisional_office,
+    "provisional_pvvnl":    _autogen_provisional_pvvnl,
     "section3":             _autogen_section3,
     "section5":             _autogen_section5,
     "thanedari":            _autogen_thanedari,

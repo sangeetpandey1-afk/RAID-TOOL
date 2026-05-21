@@ -174,6 +174,36 @@ const RaidFormView = (function () {
             </div>
           </div>
 
+          <!-- ========== DISPATCH / NOTICE FIELDS (पत्रांक header) ========== -->
+          <div class="mt-4 p-3 rounded border border-slate-200 bg-slate-50">
+            <h4 class="text-sm font-semibold text-slate-700 mb-2">
+              📨 Notice Dispatch Details / पत्रांक विवरण
+              <span class="text-xs text-slate-500 font-normal">— यह provisional notice me show honge</span>
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <div>
+                <label class="form-label">Dispatch No. / पत्रांक</label>
+                <input id="rf-dispatch-number" class="form-input" placeholder="e.g. 1108" />
+              </div>
+              <div>
+                <label class="form-label">Dispatch Date / प्रेषण तिथि</label>
+                <input id="rf-dispatch-date" type="date" class="form-input" />
+              </div>
+              <div>
+                <label class="form-label">Checking Report No. / CH No.</label>
+                <input id="rf-checking-report-number" class="form-input" placeholder="e.g. 21/9142" />
+              </div>
+              <div>
+                <label class="form-label">Hearing Date / सुनवाई तिथि</label>
+                <input id="rf-hearing-date" type="date" class="form-input" />
+              </div>
+              <div>
+                <label class="form-label">Hearing Time / समय</label>
+                <input id="rf-hearing-time" class="form-input" placeholder="e.g. 11.00 am" />
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>`;
   }
@@ -705,6 +735,12 @@ const RaidFormView = (function () {
       sub_substation: $("rf-substation"),
       online_no: $("rf-online"),
       fir_number: $("rf-fir"),
+      // Dispatch / notice tracking fields
+      dispatch_number:        $("rf-dispatch-number") || null,
+      dispatch_date:          $("rf-dispatch-date") || null,
+      checking_report_number: $("rf-checking-report-number") || null,
+      hearing_date:           $("rf-hearing-date") || null,
+      hearing_time:           $("rf-hearing-time") || null,
       connected_load_kw: parseFloat($("rf-cload")) || 0,
       less_unit: parseFloat($("rf-less-unit")) || 0,
       multiplier: parseFloat($("rf-multiplier")) || 2,

@@ -160,6 +160,12 @@ const CaseDetailView = (function () {
           ["Online No.",     c.online_no],
           ["Multiplier",     c.multiplier ? `${c.multiplier}×` : "—"],
           ["Offense #",      c.offense_count],
+          ["—",              "—"],
+          ["📨 Dispatch No. / पत्रांक", c.dispatch_number],
+          ["Dispatch Date / प्रेषण तिथि", UI.date(c.dispatch_date)],
+          ["CH No. / Checking Report", c.checking_report_number],
+          ["Hearing Date / सुनवाई तिथि", UI.date(c.hearing_date)],
+          ["Hearing Time / समय", c.hearing_time],
           ["Created",        UI.dateTime(c.created_at)],
         ])}
       </div>`;
@@ -461,6 +467,7 @@ const CaseDetailView = (function () {
   function tabDocuments() {
     const docs = state.full.documents || [];
     const kinds = [
+      ["provisional_pvvnl",    "🌟 Provisional Notice (PVVNL Format)"],
       ["provisional_consumer", "Provisional (Consumer Copy)"],
       ["provisional_office",   "Provisional (Office Copy)"],
       ["section3",             "Section 3 Notice"],
@@ -471,14 +478,29 @@ const CaseDetailView = (function () {
       ["compounding_order",    "Compounding Order"],
       ["noc",                  "NOC"],
     ];
+    const c = state.full.case;
+    const dispatchInfo = (c.dispatch_number || c.checking_report_number || c.hearing_date) ? `
+      <div class="mb-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+        <strong class="text-blue-900">📨 Dispatch Info:</strong>
+        ${c.dispatch_number ? `पत्रांक <b>${UI.escape(c.dispatch_number)}</b>` : ""}
+        ${c.checking_report_number ? ` · CH No. <b>${UI.escape(c.checking_report_number)}</b>` : ""}
+        ${c.dispatch_date ? ` · दिनांक <b>${UI.date(c.dispatch_date)}</b>` : ""}
+        ${c.hearing_date ? ` · सुनवाई <b>${UI.date(c.hearing_date)} ${UI.escape(c.hearing_time||'')}</b>` : ""}
+      </div>` : `
+      <div class="mb-3 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+        ⚠️ Dispatch fields (पत्रांक, CH No., हेयरिंग तिथि) khaali hain.
+        Use "Edit Dispatch Info" button below to set them before generating PVVNL notice.
+      </div>`;
     return `
       <div class="mb-4 p-3 bg-slate-50 rounded border border-slate-200">
         <h4 class="font-semibold text-sm mb-2">Generate Document</h4>
-        <div class="flex flex-wrap gap-2">
+        ${dispatchInfo}
+        <div class="flex flex-wrap gap-2 mb-2">
           ${kinds.map(([k, label]) => `
-            <button class="btn btn-secondary btn-sm" data-gen="${k}">📄 ${UI.escape(label)}</button>
+            <button class="btn ${k === 'provisional_pvvnl' ? 'btn-primary' : 'btn-secondary'} btn-sm" data-gen="${k}">📄 ${UI.escape(label)}</button>
           `).join("")}
         </div>
+        <button id="cd-edit-dispatch" class="btn btn-warning btn-sm">✏️ Edit Dispatch Info</button>
       </div>
 
       <table class="data-table w-full">
@@ -510,6 +532,66 @@ const CaseDetailView = (function () {
           await refresh();
         } catch (e) { UI.toast(e.message, "error"); }
       });
+    });
+
+    // Edit Dispatch Info modal
+    const editBtn = document.getElementById("cd-edit-dispatch");
+    if (editBtn) {
+      editBtn.addEventListener("click", showDispatchEditor);
+    }
+  }
+
+  function showDispatchEditor() {
+    const c = state.full.case;
+    const m = UI.modal({
+      title: "📨 Edit Dispatch Info / पत्रांक विवरण",
+      html: `
+        <div class="space-y-3">
+          <div>
+            <label class="form-label">Dispatch Number / पत्रांक</label>
+            <input id="ed-dispatch-number" class="form-input" value="${UI.escape(c.dispatch_number||'')}" placeholder="e.g. 1108" />
+          </div>
+          <div>
+            <label class="form-label">Dispatch Date / प्रेषण तिथि</label>
+            <input id="ed-dispatch-date" type="date" class="form-input" value="${UI.escape(c.dispatch_date||'')}" />
+          </div>
+          <div>
+            <label class="form-label">Checking Report No. / CH No.</label>
+            <input id="ed-checking-report-number" class="form-input" value="${UI.escape(c.checking_report_number||'')}" placeholder="e.g. 21/9142" />
+          </div>
+          <div>
+            <label class="form-label">Hearing Date / सुनवाई तिथि</label>
+            <input id="ed-hearing-date" type="date" class="form-input" value="${UI.escape(c.hearing_date||'')}" />
+          </div>
+          <div>
+            <label class="form-label">Hearing Time / समय</label>
+            <input id="ed-hearing-time" class="form-input" value="${UI.escape(c.hearing_time||'')}" placeholder="e.g. 11.00 am" />
+          </div>
+        </div>`,
+      footer: `
+        <button class="btn btn-secondary" data-cancel>Cancel</button>
+        <button class="btn btn-primary" data-save>💾 Save</button>`,
+    });
+    m.root.querySelector("[data-cancel]").addEventListener("click", () => m.close());
+    m.root.querySelector("[data-save]").addEventListener("click", async () => {
+      const updates = {
+        case_id: state.caseId,
+        // Need to send all required fields too — backend save_case is a full upsert
+        account_number: c.account_number,
+        section: c.section,
+        inspection_date: c.inspection_date,
+        dispatch_number:        document.getElementById("ed-dispatch-number").value,
+        dispatch_date:          document.getElementById("ed-dispatch-date").value,
+        checking_report_number: document.getElementById("ed-checking-report-number").value,
+        hearing_date:           document.getElementById("ed-hearing-date").value,
+        hearing_time:           document.getElementById("ed-hearing-time").value,
+      };
+      try {
+        await API.saveCase(updates);
+        UI.toast("Dispatch info updated.", "success");
+        m.close();
+        await refresh();
+      } catch (e) { UI.toast(e.message, "error"); }
     });
   }
 

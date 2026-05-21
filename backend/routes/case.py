@@ -49,31 +49,67 @@ def _resolve_consumer(account: str | None, name: str | None,
 
 
 def _ensure_consumer(payload: dict) -> int | None:
-    """If consumer doesn't exist, insert a minimal record and return id."""
+    """If consumer doesn't exist, insert a minimal record and return id.
+    If exists, update missing fields from payload."""
     acct = normalize_account(payload.get("account_number"))
     if not acct:
         return None
-    existing = fetch_one("SELECT id FROM consumers WHERE account_number=?",
+    existing = fetch_one("SELECT * FROM consumers WHERE account_number=?",
                         (acct,))
     if existing:
+        # Update any fields the form has that consumer doesn't yet
+        execute(
+            """UPDATE consumers SET
+                  name=COALESCE(NULLIF(?,''), name),
+                  father_name=COALESCE(NULLIF(?,''), father_name),
+                  village=COALESCE(NULLIF(?,''), village),
+                  post_office=COALESCE(NULLIF(?,''), post_office),
+                  pin_code=COALESCE(NULLIF(?,''), pin_code),
+                  mobile=COALESCE(NULLIF(?,''), mobile),
+                  category=COALESCE(NULLIF(?,''), category),
+                  supply_type=COALESCE(NULLIF(?,''), supply_type),
+                  load_value=COALESCE(?, load_value),
+                  sub_substation=COALESCE(NULLIF(?,''), sub_substation),
+                  div_code=COALESCE(NULLIF(?,''), div_code),
+                  updated_at=datetime('now')
+               WHERE account_number=?""",
+            (
+                payload.get("name") or "",
+                payload.get("father_name") or "",
+                payload.get("village") or "",
+                payload.get("post_office") or "",
+                payload.get("pin_code") or "",
+                payload.get("mobile") or "",
+                payload.get("category") or "",
+                payload.get("supply_type") or "",
+                safe_float(payload.get("connected_load_kw")) or None,
+                payload.get("sub_substation") or "",
+                payload.get("div_code") or "",
+                acct,
+            ),
+        )
         return existing["id"]
     cur = execute(
         """INSERT INTO consumers
               (account_number, name, father_name, address, village,
-               mobile, supply_type, category, sub_substation, div_code,
+               post_office, pin_code, mobile,
+               supply_type, category, sub_substation, div_code, load_value,
                connection_status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             acct,
             payload.get("name"),
             payload.get("father_name"),
             payload.get("address"),
             payload.get("village"),
+            payload.get("post_office"),
+            payload.get("pin_code"),
             payload.get("mobile"),
             payload.get("supply_type"),
             payload.get("category"),
             payload.get("sub_substation"),
             payload.get("div_code"),
+            safe_float(payload.get("connected_load_kw")) or None,
             payload.get("connection_status") or "Active",
         ),
     )
@@ -132,6 +168,8 @@ def save_case():
                   devices_json=?, less_unit=?, multiplier=?,
                   offense_count=?, assessment_json=?, total_assessment=?,
                   compounding_amount=?, fir_number=?, case_status=?,
+                  dispatch_number=?, dispatch_date=?, checking_report_number=?,
+                  hearing_date=?, hearing_time=?,
                   updated_at=datetime('now')
                WHERE case_id=?""",
             (
@@ -158,6 +196,11 @@ def save_case():
                 compounding_amount or None,
                 body.get("fir_number"),
                 body.get("case_status") or existing["case_status"],
+                body.get("dispatch_number") or existing.get("dispatch_number"),
+                parse_date(body.get("dispatch_date")) or existing.get("dispatch_date"),
+                body.get("checking_report_number") or existing.get("checking_report_number"),
+                parse_date(body.get("hearing_date")) or existing.get("hearing_date"),
+                body.get("hearing_time") or existing.get("hearing_time"),
                 case_id,
             ),
         )
@@ -173,8 +216,11 @@ def save_case():
                    connected_load_kw, user_name, user_father, user_address,
                    devices_json, less_unit, multiplier, offense_count,
                    assessment_json, total_assessment, compounding_amount,
-                   fir_number, case_status, created_by)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   fir_number, case_status,
+                   dispatch_number, dispatch_date, checking_report_number,
+                   hearing_date, hearing_time,
+                   created_by)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 case_id,
                 body.get("online_no"),
@@ -200,6 +246,11 @@ def save_case():
                 compounding_amount or None,
                 body.get("fir_number"),
                 body.get("case_status") or "open",
+                body.get("dispatch_number"),
+                parse_date(body.get("dispatch_date")),
+                body.get("checking_report_number"),
+                parse_date(body.get("hearing_date")),
+                body.get("hearing_time"),
                 body.get("created_by") or "system",
             ),
         )
@@ -318,40 +369,40 @@ def search_cases():
 
     q = args.get("q")
     if q:
-        where.append("(account_number LIKE ? OR online_no LIKE ? "
-                     "OR user_name LIKE ? OR fir_number LIKE ?)")
+        where.append("(r.account_number LIKE ? OR r.online_no LIKE ? "
+                     "OR r.user_name LIKE ? OR r.fir_number LIKE ?)")
         like = f"%{q}%"
         params += [like, like, like, like]
 
     if args.get("account"):
-        where.append("account_number=?")
+        where.append("r.account_number=?")
         params.append(normalize_account(args["account"]))
     if args.get("section"):
-        where.append("section=?")
+        where.append("r.section=?")
         params.append(args["section"])
     if args.get("status"):
-        where.append("case_status=?")
+        where.append("r.case_status=?")
         params.append(args["status"])
     if args.get("je_name"):
-        where.append("je_name=?")
+        where.append("r.je_name=?")
         params.append(args["je_name"])
     if args.get("fir_number"):
-        where.append("fir_number=?")
+        where.append("r.fir_number=?")
         params.append(args["fir_number"])
 
     fr = parse_date(args.get("from_date"))
     to = parse_date(args.get("to_date"))
     if fr:
-        where.append("inspection_date >= ?")
+        where.append("r.inspection_date >= ?")
         params.append(fr)
     if to:
-        where.append("inspection_date <= ?")
+        where.append("r.inspection_date <= ?")
         params.append(to)
     if args.get("min_amount"):
-        where.append("total_assessment >= ?")
+        where.append("r.total_assessment >= ?")
         params.append(safe_float(args["min_amount"]))
     if args.get("max_amount"):
-        where.append("total_assessment <= ?")
+        where.append("r.total_assessment <= ?")
         params.append(safe_float(args["max_amount"]))
 
     # Always LEFT JOIN consumers so we can show name + div in results

@@ -172,6 +172,12 @@ CREATE TABLE IF NOT EXISTS raid_cases (
     compounding_amount REAL,
     fir_number         TEXT,
     case_status        TEXT DEFAULT 'open',  -- open|noticed|paid|closed|appealed
+    -- ---- Dispatch / Notice tracking (पत्रांक header fields) -----------
+    dispatch_number         TEXT,        -- पत्रांक संख्या e.g. "1108"
+    dispatch_date           TEXT,        -- प्रेषण तिथि (ISO date)
+    checking_report_number  TEXT,        -- CH No. e.g. "21/9142"
+    hearing_date            TEXT,        -- सुनवाई तिथि (निर्धारित तिथि)
+    hearing_time            TEXT,        -- सुनवाई समय e.g. "11:00 AM"
     created_by         TEXT,
     created_at         TEXT DEFAULT (datetime('now')),
     updated_at         TEXT DEFAULT (datetime('now')),
