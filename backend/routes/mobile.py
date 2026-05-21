@@ -212,20 +212,53 @@ label {{ display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-
 <div class="page" id="pageEntry">
   <div class="card">
     <h3>➕ New Raid Case Entry</h3>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <input type="checkbox" id="entryNoConnection" onchange="toggleNoConnection()" style="width:auto;">
+      <span style="font-size:14px;">⚠️ कोई connection नहीं है (केवल user detail)</span>
+    </label>
+  </div>
+
+  <!-- Consumer details card (hidden when no-connection) -->
+  <div class="card" id="consumerCard">
+    <h3>📋 Consumer (पंजीकृत उपभोक्ता)</h3>
     <label>Account Number / खाता संख्या</label>
     <input type="text" id="entryAccount" placeholder="Account No.">
     <button class="btn-sm btn-info" onclick="fetchConsumer()">Consumer खोजें</button>
     <div id="consumerInfo" style="margin:8px 0;font-size:13px;color:#555;"></div>
-  </div>
-  <div class="card">
+
     <label>Consumer Name / उपभोक्ता नाम</label>
     <input type="text" id="entryName">
-    <label>Father Name / पिता नाम</label>
+    <label>Consumer Father Name / पिता नाम</label>
     <input type="text" id="entryFather">
-    <label>Village / ग्राम</label>
-    <input type="text" id="entryVillage">
+  </div>
+
+  <!-- User details card -->
+  <div class="card">
+    <h3>👤 User (परिसर पर मिला व्यक्ति)</h3>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;" id="sameAsConsumerWrap">
+      <input type="checkbox" id="entrySameAsConsumer" onchange="syncUserFromConsumer()" style="width:auto;">
+      <span style="font-size:14px;">✓ User और Consumer एक ही हैं (same)</span>
+    </label>
+
+    <label>User Name / उपयोगकर्ता का नाम</label>
+    <input type="text" id="entryUserName">
+    <label>User Father Name / पिता नाम</label>
+    <input type="text" id="entryUserFather">
     <label>Mobile</label>
     <input type="tel" id="entryMobile">
+  </div>
+
+  <!-- Address card -->
+  <div class="card">
+    <h3>📍 पता / Address</h3>
+    <label>Village / ग्राम</label>
+    <input type="text" id="entryVillage">
+    <label>Landmark / निकटवर्ती स्थान</label>
+    <input type="text" id="entryLandmark" placeholder="जैसे: मंदिर के पास, स्कूल के सामने">
+    <label>Post Office / डाकघर</label>
+    <input type="text" id="entryPost">
+    <label>PIN Code</label>
+    <input type="text" id="entryPin" maxlength="6">
   </div>
   <div class="card">
     <label>Section / धारा</label>
@@ -472,6 +505,59 @@ function viewCase(caseId) {{
   loadAppeals();
 }}
 
+// ---- Toggle: No Connection mode ----
+function toggleNoConnection() {{
+  const noConn = document.getElementById('entryNoConnection').checked;
+  const consumerCard = document.getElementById('consumerCard');
+  const sameWrap = document.getElementById('sameAsConsumerWrap');
+  if (noConn) {{
+    consumerCard.style.display = 'none';
+    sameWrap.style.display = 'none';
+    // Clear consumer fields
+    document.getElementById('entryAccount').value = '';
+    document.getElementById('entryName').value = '';
+    document.getElementById('entryFather').value = '';
+    // Uncheck "same"
+    document.getElementById('entrySameAsConsumer').checked = false;
+  }} else {{
+    consumerCard.style.display = 'block';
+    sameWrap.style.display = 'flex';
+  }}
+}}
+
+// ---- Sync User from Consumer (when "same" is ticked) ----
+function syncUserFromConsumer() {{
+  const same = document.getElementById('entrySameAsConsumer').checked;
+  if (same) {{
+    document.getElementById('entryUserName').value = document.getElementById('entryName').value;
+    document.getElementById('entryUserFather').value = document.getElementById('entryFather').value;
+    // Make user fields readonly visually
+    document.getElementById('entryUserName').setAttribute('readonly', 'true');
+    document.getElementById('entryUserFather').setAttribute('readonly', 'true');
+    document.getElementById('entryUserName').style.background = '#f0f0f0';
+    document.getElementById('entryUserFather').style.background = '#f0f0f0';
+  }} else {{
+    document.getElementById('entryUserName').removeAttribute('readonly');
+    document.getElementById('entryUserFather').removeAttribute('readonly');
+    document.getElementById('entryUserName').style.background = '';
+    document.getElementById('entryUserFather').style.background = '';
+  }}
+}}
+
+// Auto-sync user when consumer name/father changes (if "same" is ticked)
+document.addEventListener('DOMContentLoaded', () => {{
+  const consName = document.getElementById('entryName');
+  const consFather = document.getElementById('entryFather');
+  if (consName) consName.addEventListener('input', () => {{
+    if (document.getElementById('entrySameAsConsumer').checked)
+      document.getElementById('entryUserName').value = consName.value;
+  }});
+  if (consFather) consFather.addEventListener('input', () => {{
+    if (document.getElementById('entrySameAsConsumer').checked)
+      document.getElementById('entryUserFather').value = consFather.value;
+  }});
+}});
+
 // ---- Consumer Fetch ----
 async function fetchConsumer() {{
   const acct = document.getElementById('entryAccount').value.trim();
@@ -484,8 +570,13 @@ async function fetchConsumer() {{
       document.getElementById('entryName').value = c.name || '';
       document.getElementById('entryFather').value = c.father_name || '';
       document.getElementById('entryVillage').value = c.village || '';
+      document.getElementById('entryLandmark').value = c.landmark || '';
+      document.getElementById('entryPost').value = c.post_office || '';
+      document.getElementById('entryPin').value = c.pin_code || '';
       document.getElementById('entryMobile').value = c.mobile || '';
       document.getElementById('entryLoad').value = c.load_value || '';
+      // Re-sync user fields if "same" is checked
+      syncUserFromConsumer();
       document.getElementById('consumerInfo').innerHTML =
         '<span class="msg msg-ok">✅ Consumer found: '+c.name+'</span>';
     }} else {{
@@ -516,14 +607,44 @@ function renderDevices() {{
 
 // ---- Save Case ----
 async function saveCase() {{
+  const noConn = document.getElementById('entryNoConnection').checked;
+  const sameAsConsumer = document.getElementById('entrySameAsConsumer').checked;
+
+  // User fields (always required)
+  let userName = document.getElementById('entryUserName').value.trim();
+  let userFather = document.getElementById('entryUserFather').value.trim();
+
+  // Consumer fields (skip if no-connection)
+  let account = '', consName = '', consFather = '';
+  if (!noConn) {{
+    account = document.getElementById('entryAccount').value.trim();
+    consName = document.getElementById('entryName').value.trim();
+    consFather = document.getElementById('entryFather').value.trim();
+    // If "same" ticked, copy consumer to user
+    if (sameAsConsumer) {{
+      userName = consName;
+      userFather = consFather;
+    }}
+  }}
+
+  // Validation
+  if (!userName) {{
+    document.getElementById('entryMsg').innerHTML =
+      '<div class="msg msg-err">❌ User Name is required</div>';
+    return;
+  }}
+
   const payload = {{
-    account_number: document.getElementById('entryAccount').value.trim(),
-    name: document.getElementById('entryName').value.trim(),
-    father_name: document.getElementById('entryFather').value.trim(),
+    account_number: account,
+    name: consName,
+    father_name: consFather,
+    user_name: userName,
+    user_father: userFather,
     village: document.getElementById('entryVillage').value.trim(),
+    landmark: document.getElementById('entryLandmark').value.trim(),
+    post_office: document.getElementById('entryPost').value.trim(),
+    pin_code: document.getElementById('entryPin').value.trim(),
     mobile: document.getElementById('entryMobile').value.trim(),
-    user_name: document.getElementById('entryName').value.trim(),
-    user_father: document.getElementById('entryFather').value.trim(),
     section: document.getElementById('entrySection').value,
     inspection_date: document.getElementById('entryDate').value,
     checking_type: document.getElementById('entryCheckType').value,
@@ -531,6 +652,7 @@ async function saveCase() {{
     connected_load_kw: parseFloat(document.getElementById('entryLoad').value) || 0,
     devices: devices.filter(d => d.name && d.L > 0),
     created_by: 'mobile',
+    no_connection: noConn,
   }};
 
   try {{
