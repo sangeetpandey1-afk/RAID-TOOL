@@ -250,12 +250,39 @@ def get_case(case_id: str):
 
     timeline = _compute_timeline(case)
 
+    # Payment summary with NOC status
+    total_due = round(safe_float(case.get("total_assessment"))
+                      + safe_float(case.get("compounding_amount")), 2)
+    total_paid = round(sum(safe_float(p["amount"]) for p in payments), 2)
+    balance = round(total_due - total_paid, 2)
+    fully_paid = balance <= 0 and total_due > 0
+    noc_issued = any(d["document_type"] == "noc" for d in documents)
+
+    payment_summary = {
+        "total_due": total_due,
+        "total_paid": total_paid,
+        "balance": balance,
+        "fully_paid": fully_paid,
+        "noc_issued": noc_issued,
+        "payment_count": len(payments),
+    }
+
+    # Inquiry summary — who came, when, how many times
+    inquiry_summary = {
+        "total_inquiries": len(inquiries),
+        "unique_callers": len(set(i["caller_name"] for i in inquiries if i.get("caller_name"))),
+        "last_inquiry": inquiries[0]["inquiry_date"] if inquiries else None,
+        "follow_up_pending": sum(1 for i in inquiries if i.get("follow_up_required")),
+    }
+
     return envelope_ok({
         "case": case,
         "consumer": consumer,
         "payments": payments,
+        "payment_summary": payment_summary,
         "notices": notices,
         "inquiries": inquiries,
+        "inquiry_summary": inquiry_summary,
         "revisions": revisions,
         "documents": documents,
         "timeline": timeline,

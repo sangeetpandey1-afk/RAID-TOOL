@@ -1,4 +1,4 @@
-"""Payment tracking routes — record, list, status, NOC trigger."""
+"""Payment tracking routes — record, list, status, NOC auto-generation."""
 from __future__ import annotations
 import logging
 from datetime import date
@@ -6,6 +6,7 @@ from datetime import date
 from flask import Blueprint, request
 
 from ..database import audit, execute, fetch_all, fetch_one
+from ..services import doc_generator
 from ..utils import (envelope_error, envelope_ok, get_json_body, parse_date,
                      safe_float)
 
@@ -103,11 +104,33 @@ def record_payment(case_id: str):
           str(cur.lastrowid), new={"amount": amount, "type": pay_type,
                                     "component": component})
 
+    # === AUTO NOC GENERATION on full payment ===
+    noc_generated = None
+    if summary.get("fully_paid"):
+        try:
+            noc_result = doc_generator.generate(
+                case_id, "noc",
+                extra={"payment_date": parse_date(body.get("payment_date"))
+                       or date.today().isoformat()},
+                user=body.get("user", "system"),
+            )
+            noc_generated = {
+                "doc_id": noc_result["id"],
+                "file_name": noc_result["file_name"],
+                "message": "NOC auto-generated / अनापत्ति प्रमाण पत्र स्वतः बन गया",
+            }
+            log.info("NOC auto-generated for case %s (payment full)", case_id)
+        except Exception as e:
+            log.warning("NOC auto-generation failed for %s: %s", case_id, e)
+            noc_generated = {"error": str(e),
+                            "message": "NOC generation failed — can retry manually"}
+
     return envelope_ok({
         "payment_id": cur.lastrowid,
         "case_status": new_status,
         "summary": summary,
         "noc_eligible": summary.get("fully_paid", False),
+        "noc": noc_generated,
     })
 
 
