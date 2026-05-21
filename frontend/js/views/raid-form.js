@@ -133,8 +133,11 @@ const RaidFormView = (function () {
 
           <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <label class="form-label">Category (LMV-1 etc.)</label>
-              <input id="rf-category" class="form-input" placeholder="LMV-1" value="LMV-1" />
+              <label class="form-label req">Category / श्रेणी</label>
+              <select id="rf-category" class="form-select">
+                <option value="">— Loading… —</option>
+              </select>
+              <p id="rf-cat-info" class="text-xs text-slate-500 mt-1"></p>
             </div>
             <div>
               <label class="form-label">Connected Load (KW)</label>
@@ -265,6 +268,9 @@ const RaidFormView = (function () {
       state.multiplier = parseFloat(e.target.value) || 2;
     });
 
+    // Category dropdown — show rate info on change
+    $("#rf-category").addEventListener("change", onCategoryChange);
+
     $("#rf-search").addEventListener("click", searchConsumer);
     $("#rf-account").addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); searchConsumer(); }
@@ -277,6 +283,87 @@ const RaidFormView = (function () {
 
     // Recalculate on any device-row blur
     $("#rf-devices").addEventListener("change", () => recalc());
+
+    // Load category dropdown
+    loadCategoryDropdown();
+  }
+
+  // ============================================================
+  // Dynamic Category Dropdown (all LMV variants from rate_master)
+  // ============================================================
+  let _rateCache = null; // [{category, effective_date, fixed_charge, duty_percent, slabs:[]}]
+
+  async function loadCategoryDropdown() {
+    const sel = document.getElementById("rf-category");
+    if (!sel) return;
+    try {
+      const r = await API.request("/api/rates/full");
+      _rateCache = r.data || [];
+      sel.innerHTML = '<option value="">— Select Category —</option>';
+      for (const cat of _rateCache) {
+        const opt = document.createElement("option");
+        opt.value = cat.category;
+        const fc = cat.fixed_charge ? ` | Fixed ₹${cat.fixed_charge}` : "";
+        const ed = cat.duty_percent ? ` | ED ${cat.duty_percent}%` : "";
+        opt.textContent = `${cat.category}${fc}${ed}`;
+        sel.appendChild(opt);
+      }
+      // If consumer already has a category, pre-select it
+      if (state.consumer && state.consumer.category) {
+        sel.value = state.consumer.category;
+        onCategoryChange();
+      } else {
+        // Default to LMV-1 if available
+        const hasLMV1 = _rateCache.find(c => c.category === "LMV-1");
+        if (hasLMV1) {
+          sel.value = "LMV-1";
+          onCategoryChange();
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load rate categories:", e.message);
+      // Fallback: allow manual entry
+      sel.innerHTML = `
+        <option value="">— No rates loaded —</option>
+        <option value="LMV-1">LMV-1</option>
+        <option value="LMV-1 URBAN">LMV-1 URBAN</option>
+        <option value="LMV-2">LMV-2</option>
+        <option value="LMV-2 RURAL">LMV-2 RURAL</option>
+        <option value="LMV-3 GRAM">LMV-3 GRAM</option>
+        <option value="LMV-3 NAGAR">LMV-3 NAGAR</option>
+        <option value="LMV-4 SARKARI">LMV-4 SARKARI</option>
+        <option value="LMV-4 PRIVATE">LMV-4 PRIVATE</option>
+        <option value="LMV-5 RURAL">LMV-5 RURAL</option>
+        <option value="LMV-5 URBAN">LMV-5 URBAN</option>
+        <option value="LMV-6">LMV-6</option>
+        <option value="LMV-7">LMV-7</option>
+        <option value="LMV-7 RURAL">LMV-7 RURAL</option>
+        <option value="LMV-7 URBAN">LMV-7 URBAN</option>
+        <option value="LMV-8">LMV-8</option>
+        <option value="LMV-9">LMV-9</option>`;
+      sel.value = "LMV-1";
+    }
+  }
+
+  function onCategoryChange() {
+    const sel = document.getElementById("rf-category");
+    const info = document.getElementById("rf-cat-info");
+    if (!sel || !info) return;
+    const cat = sel.value;
+    if (!cat || !_rateCache) {
+      info.textContent = "";
+      return;
+    }
+    const found = _rateCache.find(c => c.category === cat);
+    if (!found) {
+      info.textContent = "⚠️ No rate data for this category";
+      info.className = "text-xs text-amber-600 mt-1";
+      return;
+    }
+    const slabCount = found.slabs ? found.slabs.length : 0;
+    const rates = (found.slabs || []).map(s => `₹${s.rate_per_unit}`).join(", ");
+    info.innerHTML = `✅ Fixed: <b>₹${found.fixed_charge || 0}</b> | ED: <b>${found.duty_percent || 0}%</b> | Slabs: ${slabCount} (${rates}) | Effective: ${found.effective_date || "—"}`;
+    info.className = "text-xs text-emerald-700 mt-1";
   }
 
   // ============================================================
@@ -340,9 +427,14 @@ const RaidFormView = (function () {
     set("rf-village", c.village);
     set("rf-post", c.post_office);
     set("rf-pin", c.pin_code);
-    set("rf-category", c.category || "LMV-1");
     set("rf-cload", c.load_value);
     set("rf-substation", c.sub_substation);
+    // Set category dropdown (auto-select from consumer's category)
+    const catSel = document.getElementById("rf-category");
+    if (catSel && c.category) {
+      catSel.value = c.category;
+      onCategoryChange();
+    }
   }
 
   function applyOffenseCheck(d) {
