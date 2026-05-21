@@ -102,10 +102,10 @@ body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 /* Bottom Navigation */
 .bottom-nav {{ position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
                display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }}
-.nav-item {{ flex: 1; text-align: center; padding: 8px 0; cursor: pointer;
-             font-size: 11px; color: #888; transition: 0.2s; }}
+.nav-item {{ flex: 1; text-align: center; padding: 6px 0; cursor: pointer;
+             font-size: 10px; color: #888; transition: 0.2s; }}
 .nav-item.active {{ color: #667eea; font-weight: 700; }}
-.nav-item .icon {{ font-size: 22px; display: block; }}
+.nav-item .icon {{ font-size: 20px; display: block; }}
 
 /* Pages */
 .page {{ display: none; padding: 15px; }}
@@ -179,6 +179,7 @@ label {{ display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-
     <button class="btn btn-primary" onclick="switchPage('pageSearch')">🔍 Search Consumer / Case</button>
     <button class="btn btn-success" onclick="switchPage('pageEntry')">➕ New Case Entry</button>
     <button class="btn btn-info" onclick="switchPage('pageUpload')">📷 Scan & Upload</button>
+    <button class="btn btn-danger" onclick="switchPage('pageAppeal')">⚖️ Appeal & Revision</button>
   </div>
   <div class="card">
     <h3>Recent Cases</h3>
@@ -288,12 +289,115 @@ label {{ display: block; font-size: 13px; color: #555; margin-bottom: 4px; font-
   </div>
 </div>
 
+<!-- ========== PAGE: APPEAL & REVISION ========== -->
+<div class="page" id="pageAppeal">
+  <div class="card">
+    <h3>⚖️ Appeal & Revision</h3>
+    <label>Case ID</label>
+    <input type="text" id="appealCaseId" placeholder="RC-XXXXXXXX-XXXXXX" autocomplete="off">
+    <button class="btn-sm btn-info" onclick="loadAppeals()">Load Case</button>
+    <div id="appealCaseInfo" style="margin:8px 0;font-size:13px;color:#555;"></div>
+  </div>
+
+  <!-- Tab buttons within Appeal page -->
+  <div class="card" style="display:flex;gap:6px;padding:10px;">
+    <button class="btn-sm btn-primary" style="flex:1;" onclick="showAppealTab('file')">📝 File New</button>
+    <button class="btn-sm btn-success" style="flex:1;" onclick="showAppealTab('proc')">📋 Proceedings</button>
+    <button class="btn-sm btn-info" style="flex:1;" onclick="showAppealTab('rev')">🔄 Revise</button>
+  </div>
+
+  <!-- File Appeal -->
+  <div class="card appeal-tab" id="appealTabFile">
+    <h3>📝 File Appeal / अपील दर्ज करें</h3>
+    <label>Appellant Name / नाम</label>
+    <input type="text" id="appAppellantName" placeholder="अपीलकर्ता का नाम">
+    <label>Relationship</label>
+    <select id="appRelation">
+      <option value="self">Self / स्वयं</option>
+      <option value="relative">Relative / सम्बन्धी</option>
+      <option value="advocate">Advocate / अधिवक्ता</option>
+      <option value="other">Other / अन्य</option>
+    </select>
+    <label>Appeal Reason / कारण</label>
+    <textarea id="appReason" rows="3" placeholder="अपील का कारण लिखें..."></textarea>
+    <label>Attach Document (PDF/Photo) — optional</label>
+    <input type="file" id="appAttach" accept="image/*,.pdf">
+    <button class="btn btn-success" onclick="fileAppeal()">⚖️ Appeal File करें</button>
+    <div id="appFileMsg"></div>
+  </div>
+
+  <!-- Existing Appeals + Proceedings -->
+  <div class="card appeal-tab" id="appealTabProc" style="display:none">
+    <h3>📋 Existing Appeals & Proceedings</h3>
+    <div id="appealList"><p style="color:#999;text-align:center;font-size:13px;">Load case to see appeals</p></div>
+    <hr style="margin:12px 0">
+    <h3>➕ Add Proceeding / कार्यवाही दर्ज करें</h3>
+    <label>Select Appeal</label>
+    <select id="procAppealId"><option value="">--Select--</option></select>
+    <label>Officer Name / अधिकारी</label>
+    <input type="text" id="procOfficer">
+    <label>Proceeding Date</label>
+    <input type="date" id="procDate">
+    <label>Summary / विवरण</label>
+    <textarea id="procSummary" rows="2"></textarea>
+    <label>Order Passed / आदेश</label>
+    <textarea id="procOrder" rows="2"></textarea>
+    <label>Next Hearing Date</label>
+    <input type="date" id="procNextDate">
+    <label>Outcome / परिणाम</label>
+    <select id="procOutcome">
+      <option value="pending">Pending</option>
+      <option value="adjourned">Adjourned / स्थगित</option>
+      <option value="partial_relief">Partial Relief</option>
+      <option value="full_relief">Full Relief</option>
+      <option value="dismissed">Dismissed / खारिज</option>
+    </select>
+    <label>Attach PDF (order copy) — optional</label>
+    <input type="file" id="procAttach" accept="image/*,.pdf">
+    <button class="btn btn-primary" onclick="addProceeding()">📋 Proceeding Save करें</button>
+    <div id="procMsg"></div>
+  </div>
+
+  <!-- Revision -->
+  <div class="card appeal-tab" id="appealTabRev" style="display:none">
+    <h3>🔄 Revise Assessment / पुनर्निर्धारण</h3>
+    <p style="font-size:12px;color:#666;margin-bottom:8px;">Appeal ke baad assessment recalculate hoga, final notice ke kaam aayega</p>
+
+    <label>Select Appeal</label>
+    <select id="revAppealId"><option value="">--Select--</option></select>
+
+    <label>New Multiplier (e.g. 6→2)</label>
+    <input type="number" id="revMultiplier" step="0.1" placeholder="e.g. 2">
+
+    <label>Less Unit (yearly consumed units to subtract)</label>
+    <input type="number" id="revLessUnit" placeholder="e.g. 100">
+
+    <label>New Connected Load (KW) — optional</label>
+    <input type="number" id="revLoad" step="0.01">
+
+    <label>New Section — optional</label>
+    <select id="revSection">
+      <option value="">No change</option>
+      <option value="135">135</option>
+      <option value="138">138</option>
+      <option value="126">126</option>
+    </select>
+
+    <label>Revised By / अधिकारी</label>
+    <input type="text" id="revBy" placeholder="SDO / EE">
+
+    <button class="btn btn-info" onclick="reviseCase()">🔄 Revise & Recalculate</button>
+    <div id="revMsg"></div>
+  </div>
+</div>
+
 <!-- Bottom Navigation -->
 <div class="bottom-nav">
   <div class="nav-item active" onclick="switchPage('pageDashboard')"><span class="icon">🏠</span>Home</div>
   <div class="nav-item" onclick="switchPage('pageSearch')"><span class="icon">🔍</span>Search</div>
   <div class="nav-item" onclick="switchPage('pageEntry')"><span class="icon">➕</span>Entry</div>
   <div class="nav-item" onclick="switchPage('pageUpload')"><span class="icon">📷</span>Upload</div>
+  <div class="nav-item" onclick="switchPage('pageAppeal')"><span class="icon">⚖️</span>Appeal</div>
 </div>
 
 <script>
@@ -361,7 +465,11 @@ async function doSearch() {{
 }}
 
 function viewCase(caseId) {{
-  alert('Case: ' + caseId + '\\n\\nFull case view coming soon!\\nFilhaal /api/cases/'+caseId+' se data mil jayega.');
+  // Jump to Appeal page with case ID pre-filled
+  document.getElementById('appealCaseId').value = caseId;
+  document.getElementById('uploadCaseId').value = caseId;
+  switchPage('pageAppeal');
+  loadAppeals();
 }}
 
 // ---- Consumer Fetch ----
@@ -482,8 +590,186 @@ async function doUpload() {{
   }} catch(e) {{ document.getElementById('uploadMsg').innerHTML=`<div class="msg msg-err">❌ ${{e.message}}</div>`; }}
 }}
 
+// ---- Appeal & Revision ----
+function showAppealTab(which) {{
+  ['file','proc','rev'].forEach(t => {{
+    const el = document.getElementById('appealTab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (el) el.style.display = (t === which) ? 'block' : 'none';
+  }});
+}}
+
+async function loadAppeals() {{
+  const cid = document.getElementById('appealCaseId').value.trim();
+  if (!cid) return;
+  // Get case info
+  try {{
+    const r = await fetch(BASE+'/api/cases/'+cid);
+    const d = await r.json();
+    if (d.ok) {{
+      const c = d.data.case || {{}};
+      document.getElementById('appealCaseInfo').innerHTML =
+        `<div class="msg msg-ok">✅ ${{c.user_name||'-'}} | ${{c.section||''}} | ₹${{(c.total_assessment||0).toLocaleString()}} | Status: ${{c.case_status}}</div>`;
+    }} else {{
+      document.getElementById('appealCaseInfo').innerHTML =
+        '<div class="msg msg-err">Case not found</div>';
+      return;
+    }}
+  }} catch(e) {{ console.error(e); return; }}
+
+  // Get appeals
+  try {{
+    const r = await fetch(BASE+'/api/cases/'+cid+'/appeals');
+    const d = await r.json();
+    const list = document.getElementById('appealList');
+    const procSel = document.getElementById('procAppealId');
+    const revSel = document.getElementById('revAppealId');
+    procSel.innerHTML = '<option value="">--Select--</option>';
+    revSel.innerHTML = '<option value="">--Select--</option>';
+
+    if (d.ok && d.data.appeals.length > 0) {{
+      list.innerHTML = d.data.appeals.map(a => `
+        <div class="result-item">
+          <div class="name">Appeal #${{a.id}} — ${{a.appellant_name}}</div>
+          <div class="detail">Date: ${{a.appeal_date}} | Status: <b>${{a.appeal_status}}</b></div>
+          <div class="detail">Reason: ${{a.appeal_reason || 'N/A'}}</div>
+          <div class="detail">Proceedings: ${{a.proceedings_count || 0}} docs attached</div>
+          ${{a.review_comments ? `<details><summary style="font-size:11px;cursor:pointer;color:#667eea">View proceedings</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f8f8f8;padding:6px;border-radius:4px;margin-top:4px;">${{a.review_comments}}</pre></details>` : ''}}
+        </div>
+      `).join('');
+      d.data.appeals.forEach(a => {{
+        procSel.innerHTML += `<option value="${{a.id}}">Appeal #${{a.id}} — ${{a.appellant_name}}</option>`;
+        revSel.innerHTML += `<option value="${{a.id}}">Appeal #${{a.id}} — ${{a.appellant_name}}</option>`;
+      }});
+    }} else {{
+      list.innerHTML = '<p style="color:#999;text-align:center;font-size:13px;">No appeals yet — file one above</p>';
+    }}
+  }} catch(e) {{ console.error(e); }}
+}}
+
+async function fileAppeal() {{
+  const cid = document.getElementById('appealCaseId').value.trim();
+  if (!cid) {{ document.getElementById('appFileMsg').innerHTML='<div class="msg msg-err">Case ID dalo</div>'; return; }}
+  const name = document.getElementById('appAppellantName').value.trim();
+  if (!name) {{ document.getElementById('appFileMsg').innerHTML='<div class="msg msg-err">Name required</div>'; return; }}
+
+  document.getElementById('appFileMsg').innerHTML='<div class="msg msg-info">Filing appeal...</div>';
+  try {{
+    // If file attached, use shortcut endpoint
+    const fileEl = document.getElementById('appAttach');
+    if (fileEl.files.length > 0) {{
+      const fd = new FormData();
+      fd.append('file', fileEl.files[0]);
+      fd.append('appellant_name', name);
+      fd.append('relationship', document.getElementById('appRelation').value);
+      fd.append('appeal_reason', document.getElementById('appReason').value);
+      const r = await fetch(BASE+'/api/cases/'+cid+'/appeal-upload', {{method:'POST', body:fd}});
+      const d = await r.json();
+      if (d.ok) {{
+        document.getElementById('appFileMsg').innerHTML=`<div class="msg msg-ok">✅ Appeal #${{d.data.appeal_id}} filed + document attached!</div>`;
+        loadAppeals();
+      }} else {{
+        document.getElementById('appFileMsg').innerHTML=`<div class="msg msg-err">❌ ${{d.error}}</div>`;
+      }}
+    }} else {{
+      // Just file the appeal record
+      const r = await fetch(BASE+'/api/cases/'+cid+'/appeals', {{
+        method:'POST', headers:{{'Content-Type':'application/json'}},
+        body: JSON.stringify({{
+          appellant_name: name,
+          appellant_relation: document.getElementById('appRelation').value,
+          appeal_reason: document.getElementById('appReason').value,
+        }})
+      }});
+      const d = await r.json();
+      if (d.ok) {{
+        document.getElementById('appFileMsg').innerHTML=`<div class="msg msg-ok">✅ Appeal #${{d.data.appeal_id}} filed!</div>`;
+        loadAppeals();
+      }} else {{
+        document.getElementById('appFileMsg').innerHTML=`<div class="msg msg-err">❌ ${{d.error}}</div>`;
+      }}
+    }}
+  }} catch(e) {{ document.getElementById('appFileMsg').innerHTML=`<div class="msg msg-err">❌ ${{e.message}}</div>`; }}
+}}
+
+async function addProceeding() {{
+  const cid = document.getElementById('appealCaseId').value.trim();
+  const aid = document.getElementById('procAppealId').value;
+  if (!cid || !aid) {{ document.getElementById('procMsg').innerHTML='<div class="msg msg-err">Case ID + Appeal select karo</div>'; return; }}
+
+  document.getElementById('procMsg').innerHTML='<div class="msg msg-info">Saving...</div>';
+  try {{
+    const r = await fetch(BASE+'/api/cases/'+cid+'/appeals/'+aid+'/proceedings', {{
+      method:'POST', headers:{{'Content-Type':'application/json'}},
+      body: JSON.stringify({{
+        officer_name: document.getElementById('procOfficer').value.trim(),
+        proceeding_date: document.getElementById('procDate').value,
+        summary: document.getElementById('procSummary').value.trim(),
+        order_passed: document.getElementById('procOrder').value.trim(),
+        next_date: document.getElementById('procNextDate').value,
+        outcome: document.getElementById('procOutcome').value,
+      }})
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      // Upload PDF if attached
+      const fileEl = document.getElementById('procAttach');
+      if (fileEl.files.length > 0) {{
+        const fd = new FormData();
+        fd.append('file', fileEl.files[0]);
+        await fetch(BASE+'/api/cases/'+cid+'/appeals/'+aid+'/upload', {{method:'POST', body:fd}});
+      }}
+      document.getElementById('procMsg').innerHTML=`<div class="msg msg-ok">✅ Proceeding saved! Status: ${{d.data.appeal_status}}</div>`;
+      loadAppeals();
+    }} else {{
+      document.getElementById('procMsg').innerHTML=`<div class="msg msg-err">❌ ${{d.error}}</div>`;
+    }}
+  }} catch(e) {{ document.getElementById('procMsg').innerHTML=`<div class="msg msg-err">❌ ${{e.message}}</div>`; }}
+}}
+
+async function reviseCase() {{
+  const cid = document.getElementById('appealCaseId').value.trim();
+  const aid = document.getElementById('revAppealId').value;
+  if (!cid || !aid) {{ document.getElementById('revMsg').innerHTML='<div class="msg msg-err">Case + Appeal select karo</div>'; return; }}
+
+  const overrides = {{}};
+  const m = document.getElementById('revMultiplier').value;
+  const lu = document.getElementById('revLessUnit').value;
+  const ld = document.getElementById('revLoad').value;
+  const sec = document.getElementById('revSection').value;
+  if (m) overrides.multiplier = parseFloat(m);
+  if (lu) overrides.less_unit = parseFloat(lu);
+  if (ld) overrides.connected_load_kw = parseFloat(ld);
+  if (sec) overrides.section = sec;
+
+  document.getElementById('revMsg').innerHTML='<div class="msg msg-info">Recalculating...</div>';
+  try {{
+    const r = await fetch(BASE+'/api/cases/'+cid+'/appeals/'+aid+'/revise', {{
+      method:'POST', headers:{{'Content-Type':'application/json'}},
+      body: JSON.stringify({{
+        overrides: overrides,
+        revised_by: document.getElementById('revBy').value.trim() || 'mobile',
+      }})
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      const r2 = d.data;
+      document.getElementById('revMsg').innerHTML =
+        `<div class="msg msg-ok">✅ Revised!<br>
+         Original: ₹${{(r2.original_assessment||0).toLocaleString()}}<br>
+         Revised:  ₹${{(r2.revised_assessment||0).toLocaleString()}}<br>
+         Relief:   ₹${{(r2.relief_given||0).toLocaleString()}}<br>
+         Final notice: section3 / section5 ab generate kar sakte ho</div>`;
+      loadAppeals();
+    }} else {{
+      document.getElementById('revMsg').innerHTML=`<div class="msg msg-err">❌ ${{d.error}}</div>`;
+    }}
+  }} catch(e) {{ document.getElementById('revMsg').innerHTML=`<div class="msg msg-err">❌ ${{e.message}}</div>`; }}
+}}
+
 // ---- Init ----
 document.getElementById('entryDate').value = new Date().toISOString().split('T')[0];
+const _td = new Date().toISOString().split('T')[0];
+const _pd = document.getElementById('procDate'); if(_pd) _pd.value = _td;
 loadDashboard();
 </script>
 </body></html>"""
