@@ -26,6 +26,8 @@ master_data/*.xlsm
 # Generated documents (runtime)
 docs/*.docx
 docs/*.pdf
+docs/RC-*/
+uploads/RC-*/
 backup/*
 
 # Logs
