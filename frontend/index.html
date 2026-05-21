@@ -63,26 +63,15 @@
     <section class="panel" id="panel-new-case">
       <h2>New Case</h2>
 
+      <h3>उपभोक्ता विवरण / Consumer (Registered)</h3>
       <div class="form-grid two-col">
         <div>
           <label>Account No. <input id="f_account" type="text" /></label>
+          <label>Online No. <input id="f_online_no" type="text" /></label>
+          <label>SC Number <input id="f_sc_number" type="text" /></label>
           <label>Name (नाम) <input id="f_name" type="text" lang="hi" /></label>
           <label>Father / पिता <input id="f_father" type="text" lang="hi" /></label>
-          <label>Village / गाँव <input id="f_village" type="text" lang="hi" /></label>
-          <label>Post Office <input id="f_post" type="text" /></label>
-          <label>Pin Code <input id="f_pin" type="text" /></label>
           <label>Mobile <input id="f_mobile" type="text" /></label>
-        </div>
-        <div>
-          <label>Section
-            <select id="f_section">
-              <option value="135">135</option>
-              <option value="138">138</option>
-              <option value="126">126</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-          <label>Inspection Date <input id="f_inspection" type="date" /></label>
           <label>Category
             <select id="f_category">
               <option>LMV-1</option><option>LMV-2</option><option>LMV-3</option>
@@ -90,12 +79,61 @@
               <option>LMV-7</option><option>LMV-8</option><option>LMV-9</option>
             </select>
           </label>
-          <label>Connected Load (kW) <input id="f_load" type="number" step="0.001" /></label>
           <label>Supply Type
             <select id="f_supply">
-              <option>Domestic</option><option>Commercial</option><option>Industrial</option>
+              <option>Domestic</option><option>Commercial</option>
+              <option>Industrial</option><option>Agricultural</option>
             </select>
           </label>
+          <label>Connection Status
+            <select id="f_conn_status">
+              <option>Active</option><option>Disconnected</option>
+              <option>Permanently Disconnected</option>
+            </select>
+          </label>
+        </div>
+        <div>
+          <label>Address (पता) <input id="f_address" type="text" lang="hi" /></label>
+          <label>Landmark (लैंडमार्क) <input id="f_landmark" type="text" lang="hi" /></label>
+          <label>Village (गाँव) <input id="f_village" type="text" lang="hi" /></label>
+          <label>Post Office (पोस्ट) <input id="f_post" type="text" lang="hi" /></label>
+          <label>Pin Code <input id="f_pin" type="text" /></label>
+          <label>Tehsil (तहसील) <input id="f_tehsil" type="text" lang="hi" /></label>
+          <label>District (जनपद) <input id="f_district" type="text" lang="hi" /></label>
+          <label>Division Code <input id="f_div_code" type="text" /></label>
+        </div>
+      </div>
+
+      <h3>निरीक्षण विवरण / Raid Header</h3>
+      <div class="form-grid two-col">
+        <div>
+          <label>Section
+            <select id="f_section">
+              <option value="135">135 (Theft)</option>
+              <option value="138">138 (TD)</option>
+              <option value="126">126 (UUE)</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>Section (Other text) <input id="f_section_other" type="text" /></label>
+          <label>Inspection Date <input id="f_inspection" type="date" /></label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_td_date" data-gate="f_td_date" />
+            TD Date applicable (Sec 138)
+          </label>
+          <label class="indent">TD Date <input id="f_td_date" type="date" /></label>
+
+          <label>Connected Load (kW) <input id="f_load" type="number" step="0.001" /></label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_less_unit" data-gate="f_less_unit" />
+            Less Unit adjustment applicable
+            <span class="small">(subtract one year of consumed units)</span>
+          </label>
+          <label class="indent">Less Unit (kWh) <input id="f_less_unit" type="number" step="0.01" /></label>
+        </div>
+        <div>
           <label>J.E. Name <input id="f_je" type="text" /></label>
           <label>Sub-Substation <input id="f_substation" type="text" /></label>
           <label>Checking Type
@@ -103,6 +141,39 @@
               <option>Vigilance</option><option>Routine</option><option>Special</option>
             </select>
           </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_fir" data-gate="f_fir" />
+            FIR registered
+          </label>
+          <label class="indent">FIR Number <input id="f_fir" type="text" /></label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_compounding" checked />
+            Calculate Section 152 Compounding (per-KW round-up)
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_multiplier" data-gate="f_multiplier" />
+            Override multiplier (default: auto 2× / 6×)
+          </label>
+          <label class="indent">Multiplier <input id="f_multiplier" type="number" step="0.5" /></label>
+        </div>
+      </div>
+
+      <h3>परिसर पर मिला उपभोक्ता / User Found at Premises</h3>
+      <p class="small" style="margin-top:-4px">
+        अगर निरीक्षण के समय परिसर पर कोई और व्यक्ति मिला (जैसे किरायेदार), तो
+        उसका नाम अलग से भरें — नोटिसों में «USER_NAME» / «USERS_FATHER» के रूप में आएगा।
+        Leave blank if same as registered consumer.
+      </p>
+      <div class="form-grid two-col">
+        <div>
+          <label>User Name (परिसर पर मिला नाम) <input id="f_user_name" type="text" lang="hi" /></label>
+          <label>User Father (पुत्र / पति) <input id="f_user_father" type="text" lang="hi" /></label>
+        </div>
+        <div>
+          <label>User Address (पता) <input id="f_user_address" type="text" lang="hi" /></label>
         </div>
       </div>
 

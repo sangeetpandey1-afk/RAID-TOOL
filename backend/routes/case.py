@@ -78,6 +78,39 @@ def _enrich_for_master(case: dict) -> dict:
         "SELECT COUNT(*) AS c FROM notices WHERE case_id=?", (cid,)
     ) or {}).get("c", 0)
 
+    # Per-type "issued" flags — sourced from BOTH the notices table and
+    # the documents table so a generated .docx counts even if no notice
+    # row was added (officers sometimes generate a draft first).
+    issued_types: set[str] = set()
+    for r in fetch_all(
+        "SELECT DISTINCT LOWER(notice_type) AS t FROM notices WHERE case_id=?",
+        (cid,),
+    ):
+        if r["t"]:
+            issued_types.add(r["t"])
+    for r in fetch_all(
+        "SELECT DISTINCT LOWER(document_type) AS t FROM documents WHERE case_id=?",
+        (cid,),
+    ):
+        if r["t"]:
+            issued_types.add(r["t"])
+
+    def _has(*aliases: str) -> bool:
+        return any(a in issued_types for a in aliases)
+
+    stage_ticks = {
+        "provisional":   _has("provisional", "provisional_consumer", "provisional_office"),
+        "final_notice":  _has("final_notice", "final"),
+        "section3":      _has("section3"),
+        "section5":      _has("section5"),
+        "thanedari":     _has("thanedari"),
+        "deposit_slip":  _has("deposit_slip"),
+        "compounding":   _has("compounding_order", "compounding"),
+        "noc":           _has("noc"),
+        "fir":           bool((case.get("fir_number") or "").strip()),
+        "paid":          pay_status == "paid",
+    }
+
     # ---- Timeline overdue flags from inspection_date
     insp = case.get("inspection_date")
     overdue_section3 = False
@@ -144,6 +177,7 @@ def _enrich_for_master(case: dict) -> dict:
         "latest_due":    (last_notice or {}).get("due_date"),
         "overdue_section3": overdue_section3,
         "overdue_section5": overdue_section5,
+        "stage_ticks":   stage_ticks,
     }
     case["offense_info"] = {
         "total_offenses": total_offenses,
@@ -171,33 +205,68 @@ def _resolve_consumer(account: str | None, name: str | None,
 
 
 def _ensure_consumer(payload: dict) -> int | None:
-    """If consumer doesn't exist, insert a minimal record and return id."""
+    """
+    Ensure a consumer row exists for the given payload's account_number.
+
+    * If the consumer is new: insert with every field the payload supplies
+      (name, father, address, village, landmark, post/pin, tehsil/district,
+      mobile, load, supply_type, category, sub_substation, div_code,
+      sc_number).
+    * If the consumer already exists: update fields that are blank in the
+      DB but supplied in the payload, so officers can fill in landmark /
+      tehsil / district later without losing existing data. Non-blank
+      fields are NOT overwritten silently.
+    """
     acct = normalize_account(payload.get("account_number"))
     if not acct:
         return None
-    existing = fetch_one("SELECT id FROM consumers WHERE account_number=?",
-                        (acct,))
+
+    field_map: dict[str, Any] = {
+        "name":              payload.get("name"),
+        "father_name":       payload.get("father_name"),
+        "address":           payload.get("address"),
+        "village":           payload.get("village"),
+        "landmark":          payload.get("landmark"),
+        "post_office":       payload.get("post_office"),
+        "pin_code":          payload.get("pin_code"),
+        "tehsil":            payload.get("tehsil"),
+        "district":          payload.get("district"),
+        "mobile":            payload.get("mobile"),
+        "load_value":        safe_float(payload.get("load_value"))
+                              or (safe_float(payload.get("connected_load_kw")) or None),
+        "load_unit":         payload.get("load_unit") or "kW",
+        "supply_type":       payload.get("supply_type"),
+        "category":          payload.get("category"),
+        "sub_substation":    payload.get("sub_substation"),
+        "connection_status": payload.get("connection_status") or "Active",
+        "div_code":          payload.get("div_code"),
+        "sc_number":         payload.get("sc_number"),
+    }
+    # Drop None / "" values so we don't overwrite existing data with blanks
+    field_map = {k: v for k, v in field_map.items()
+                 if v not in (None, "", 0) or k == "connection_status"}
+
+    existing = fetch_one("SELECT * FROM consumers WHERE account_number=?",
+                         (acct,))
     if existing:
+        # Fill in any column that is currently NULL/'' in the DB
+        updates = {k: v for k, v in field_map.items()
+                   if (existing.get(k) in (None, "", 0)) and v not in (None, "")}
+        if updates:
+            cols = ", ".join(f"{c}=?" for c in updates)
+            execute(
+                f"UPDATE consumers SET {cols}, updated_at=datetime('now') "
+                f"WHERE id=?",
+                list(updates.values()) + [existing["id"]],
+            )
         return existing["id"]
+
+    # Brand-new consumer
+    cols = ["account_number"] + list(field_map.keys())
+    placeholders = ",".join(["?"] * len(cols))
     cur = execute(
-        """INSERT INTO consumers
-              (account_number, name, father_name, address, village,
-               mobile, supply_type, category, sub_substation, div_code,
-               connection_status)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-        (
-            acct,
-            payload.get("name"),
-            payload.get("father_name"),
-            payload.get("address"),
-            payload.get("village"),
-            payload.get("mobile"),
-            payload.get("supply_type"),
-            payload.get("category"),
-            payload.get("sub_substation"),
-            payload.get("div_code"),
-            payload.get("connection_status") or "Active",
-        ),
+        f"INSERT INTO consumers ({', '.join(cols)}) VALUES ({placeholders})",
+        [acct] + list(field_map.values()),
     )
     return cur.lastrowid
 

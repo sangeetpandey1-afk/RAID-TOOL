@@ -256,8 +256,47 @@ input:focus, select:focus, textarea:focus {
 .toast.error { background: var(--danger); }
 .toast.ok    { background: var(--ok); }
 
+/* --------------------------------------------------- checkbox-gated rows */
+label.check-row {
+  flex-direction: row; align-items: center; gap: 8px;
+  font-weight: 500; color: var(--text); padding: 4px 0;
+}
+label.check-row input[type="checkbox"] {
+  width: 16px; height: 16px; margin: 0; flex: 0 0 16px;
+  accent-color: var(--primary);
+}
+label.indent {
+  margin-left: 24px; padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+label.disabled, label.indent.disabled input {
+  opacity: 0.45;
+}
+
+/* --------------------------------------------------- stage tick row */
+.stage-row {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;
+}
+.stage-panel {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 10px;
+}
+.tick {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 3px; font-size: 11px;
+  border: 1px solid var(--border); background: var(--surface);
+  white-space: nowrap;
+}
+.tick .mark { font-weight: bold; font-size: 12px; }
+.tick.done { background: #ecfdf5; border-color: #16a34a; color: #166534; }
+.tick.done .mark { color: #16a34a; }
+.tick.pending { background: #fafbfc; color: var(--muted); }
+.tick.pending .mark { color: #b91c1c; }
+
+.stage-panel .tick { font-size: 12px; padding: 4px 10px; }
+
 /* --------------------------------------------------- footer */
-.footer {
   margin-top: 30px; padding: 10px 20px;
   background: var(--surface); border-top: 1px solid var(--border);
   color: var(--muted); font-size: 12px;

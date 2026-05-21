@@ -241,26 +241,81 @@ function collectDevicesFromUI() {
 }
 
 function buildCaseRequest() {
+  const num = (id) => {
+    const v = $(id).value;
+    return v === "" ? null : Number(v);
+  };
   return {
     account_number:    $("#f_account").value.trim(),
+    online_no:         $("#f_online_no").value.trim(),
+    sc_number:         $("#f_sc_number").value.trim(),
     name:              $("#f_name").value.trim(),
     father_name:       $("#f_father").value.trim(),
+    address:           $("#f_address").value.trim(),
+    landmark:          $("#f_landmark").value.trim(),
     village:           $("#f_village").value.trim(),
     post_office:       $("#f_post").value.trim(),
     pin_code:          $("#f_pin").value.trim(),
+    tehsil:            $("#f_tehsil").value.trim(),
+    district:          $("#f_district").value.trim(),
+    div_code:          $("#f_div_code").value.trim(),
     mobile:            $("#f_mobile").value.trim(),
-    section:           $("#f_section").value,
-    inspection_date:   $("#f_inspection").value || null,
     category:          $("#f_category").value,
-    connected_load_kw: Number($("#f_load").value) || 0,
     supply_type:       $("#f_supply").value,
+    connection_status: $("#f_conn_status").value,
+
+    section:           $("#f_section").value,
+    section_other:     $("#f_section_other").value.trim(),
+    inspection_date:   $("#f_inspection").value || null,
+    td_date:           $("#f_td_date").value || null,
+    connected_load_kw: num("#f_load") || 0,
+    less_unit:         num("#f_less_unit"),
+    multiplier:        num("#f_multiplier"),
     je_name:           $("#f_je").value.trim(),
     sub_substation:    $("#f_substation").value.trim(),
     checking_type:     $("#f_checking").value,
+    fir_number:        $("#f_fir").value.trim(),
+
+    user_name:         $("#f_user_name").value.trim(),
+    user_father:       $("#f_user_father").value.trim(),
+    user_address:      $("#f_user_address").value.trim(),
+
     devices:           collectDevicesFromUI(),
-    calculate_compounding: true,
+    calculate_compounding: $("#chk_compounding").checked,
     created_by: "browser_ui",
   };
+}
+
+/* ----- Lookup consumer by account number, autofill the form ----- */
+async function lookupConsumer() {
+  const acct = $("#f_account").value.trim();
+  if (!acct) return;
+  const env = await API.get(`/api/consumers/${encodeURIComponent(acct)}`);
+  if (!env.ok) {
+    // Not found is fine — officer is creating a new consumer
+    if (env.code === "NOT_FOUND" || /not found/i.test(env.error || "")) return;
+    toast("Lookup: " + env.error, "error");
+    return;
+  }
+  const c = env.data?.consumer || env.data || {};
+  const setIf = (id, v) => { if (!$(id).value && v) $(id).value = v; };
+  setIf("#f_name",        c.name);
+  setIf("#f_father",      c.father_name);
+  setIf("#f_address",     c.address);
+  setIf("#f_landmark",    c.landmark);
+  setIf("#f_village",     c.village);
+  setIf("#f_post",        c.post_office);
+  setIf("#f_pin",         c.pin_code);
+  setIf("#f_tehsil",      c.tehsil);
+  setIf("#f_district",    c.district);
+  setIf("#f_div_code",    c.div_code);
+  setIf("#f_mobile",      c.mobile);
+  setIf("#f_sc_number",   c.sc_number);
+  setIf("#f_substation",  c.sub_substation);
+  if (c.category)    $("#f_category").value = c.category;
+  if (c.supply_type) $("#f_supply").value   = c.supply_type;
+  if (!$("#f_load").value && c.load_value) $("#f_load").value = c.load_value;
+  toast(`Loaded: ${c.name || acct}`, "ok");
 }
 
 async function liveCalc() {
@@ -351,6 +406,32 @@ function noticeBadge(n) {
   return `${statusPill(n.latest_type)} ${extra} <span class="small">×${n.count}</span>`;
 }
 
+const STAGE_LABELS = {
+  provisional:   "Provisional",
+  final_notice:  "Final",
+  section3:      "Sec 3",
+  section5:      "Sec 5",
+  thanedari:     "Thanedari",
+  deposit_slip:  "Deposit",
+  compounding:   "Comp",
+  noc:           "NOC",
+  fir:           "FIR",
+  paid:          "Paid",
+};
+
+function stageTicks(ticks, layout = "row") {
+  if (!ticks) return "";
+  const items = Object.entries(STAGE_LABELS).map(([k, label]) => {
+    const done = !!ticks[k];
+    const cls  = done ? "tick done" : "tick pending";
+    const mark = done ? "✓" : "✗";
+    return `<span class="${cls}" title="${label}: ${done ? "Issued" : "Pending"}">
+              <span class="mark">${mark}</span> ${label}
+            </span>`;
+  }).join("");
+  return `<div class="stage-${layout}">${items}</div>`;
+}
+
 async function refreshCases() {
   const env = await API.get("/api/cases/search?page_size=200");
   if (!env.ok) { toast("Cases: " + env.error, "error"); return; }
@@ -380,7 +461,7 @@ async function refreshCases() {
             <span class="small">+ ${fmtMoney(c.compounding_amount || 0)}</span></td>
         <td>${paymentPill(p)}<br/>
             ${progressBar(p.percent, p.status)}</td>
-        <td>${noticeBadge(n)}</td>
+        <td>${noticeBadge(n)}<br/>${stageTicks(n.stage_ticks, "row")}</td>
         <td>${statusPill(c.case_status)}</td>
         <td class="actions-col">
           <button class="btn small primary" data-load-case="${escapeHtml(c.case_id)}">Open</button>
@@ -416,19 +497,41 @@ async function loadCase(cid) {
   const c = env.data.case;
   const consumer = env.data.consumer || {};
 
+  // Pull the enriched row from the master grid for stage ticks
+  const grid = await API.get(`/api/cases/search?account=${encodeURIComponent(c.account_number || "")}`);
+  const enriched = (grid.ok ? grid.data : []).find(r => r.case_id === cid) || {};
+  const stageT = enriched.notice_summary?.stage_ticks;
+  const payS   = enriched.payment_summary;
+  const offI   = enriched.offense_info;
+
   $("#casesDetailHeader").style.display = "";
   $("#casesDetail").style.display = "";
   $("#casesDetail").innerHTML = `
     <div class="detail-grid">
-      <div><b>${escapeHtml(c.case_id)}</b> · ${statusPill(c.case_status)}</div>
-      <div>Account: <code>${escapeHtml(c.account_number || "")}</code></div>
-      <div>Consumer: ${escapeHtml(consumer.name || "")} · ${escapeHtml(consumer.village || "")}</div>
-      <div>Section: ${escapeHtml(c.section || "")} · Inspection: ${escapeHtml(c.inspection_date || "")}</div>
-      <div>Assessment: ₹ <b>${fmtMoney(c.total_assessment)}</b></div>
-      <div>Compounding: ₹ ${fmtMoney(c.compounding_amount)}</div>
-      <div>J.E.: ${escapeHtml(c.je_name || "")}</div>
-      <div>Sub-station: ${escapeHtml(c.sub_substation || "")}</div>
-    </div>`;
+      <div><b>${escapeHtml(c.case_id)}</b> · ${statusPill(c.case_status)}
+           ${offI?.is_repeat ? `<span class="pill red">⚠ REPEAT ${offI.total_offenses}×</span>` : ""}</div>
+      <div>Account: <code>${escapeHtml(c.account_number || "")}</code>
+           ${c.online_no ? ` · Online: <code>${escapeHtml(c.online_no)}</code>` : ""}</div>
+      <div>Consumer: ${escapeHtml(consumer.name || "")} · पिता ${escapeHtml(consumer.father_name || "")}</div>
+      <div>${escapeHtml(consumer.address || "")}
+           ${consumer.landmark ? ` · Landmark: ${escapeHtml(consumer.landmark)}` : ""}</div>
+      <div>${escapeHtml(consumer.village || "")} · Post ${escapeHtml(consumer.post_office || "")} - ${escapeHtml(consumer.pin_code || "")}</div>
+      <div>Tehsil: ${escapeHtml(consumer.tehsil || "—")} · District: ${escapeHtml(consumer.district || "—")}</div>
+      <div>Mobile: ${escapeHtml(consumer.mobile || "")} · Category: ${escapeHtml(consumer.category || "")}</div>
+      <div>Section: ${escapeHtml(c.section || "")} · Inspection: ${escapeHtml(c.inspection_date || "")}
+           ${c.td_date ? ` · TD: ${escapeHtml(c.td_date)}` : ""}</div>
+      <div>Assessment: ₹ <b>${fmtMoney(c.total_assessment)}</b> · Compounding: ₹ ${fmtMoney(c.compounding_amount)}</div>
+      <div>J.E.: ${escapeHtml(c.je_name || "")} · Sub-station: ${escapeHtml(c.sub_substation || "")}</div>
+      ${c.fir_number ? `<div>FIR: <b>${escapeHtml(c.fir_number)}</b></div>` : ""}
+      ${c.user_name ? `<div>User found at premises: ${escapeHtml(c.user_name)}
+                       (s/o ${escapeHtml(c.user_father || "")})</div>` : ""}
+    </div>
+    ${payS ? `<div style="margin-top:8px">
+       Payment: ${paymentPill(payS)} ${progressBar(payS.percent, payS.status)}
+       <span class="small">Paid ₹${fmtMoney(payS.total_paid)} / ₹${fmtMoney(payS.total_assessment)} · Balance ₹${fmtMoney(payS.balance)}</span>
+     </div>` : ""}
+    ${stageT ? `<div style="margin-top:10px"><b>Stage Progress:</b>${stageTicks(stageT, "panel")}</div>` : ""}
+  `;
 
   // Document toolbar — Generate All + per-doc Preview/Print
   $("#docToolbarHeader").style.display = "";
@@ -670,5 +773,34 @@ window.addEventListener("DOMContentLoaded", async () => {
   refreshDashboard();
   refreshCases();
   $("#f_inspection").value = new Date().toISOString().slice(0, 10);
+
+  // Lookup consumer when account number loses focus
+  const acctInput = $("#f_account");
+  if (acctInput) acctInput.addEventListener("change", lookupConsumer);
+
+  // Section toggle: auto-check TD Date when section is 138
+  const sec = $("#f_section");
+  const tdChk = $("#chk_td_date");
+  if (sec && tdChk) {
+    sec.addEventListener("change", () => {
+      tdChk.checked = (sec.value === "138");
+      tdChk.dispatchEvent(new Event("change"));
+    });
+  }
+
+  // Wire each "checkbox -> gated input" pair
+  $$("[data-gate]").forEach(chk => {
+    const targetId = chk.dataset.gate;
+    const target   = document.getElementById(targetId);
+    if (!target) return;
+    const apply = () => {
+      target.disabled = !chk.checked;
+      if (!chk.checked) target.value = "";
+      target.closest("label")?.classList.toggle("disabled", !chk.checked);
+    };
+    chk.addEventListener("change", apply);
+    apply();   // initial state
+  });
+
   setInterval(refreshHealth, 30000);
 });
