@@ -101,8 +101,10 @@ def save_case():
     total = safe_float(body.get("total_assessment")) \
         or safe_float((assessment or {}).get("grand_total"))
 
-    # Compounding (Section 152) — optional, only if requested
+    # Compounding (Section 152) — manual OR auto
     compounding_amount = safe_float(body.get("compounding_amount"))
+    # If amount directly given → use as manual (no auto-calc)
+    # If "calculate_compounding": true → auto-calculate
     if not compounding_amount and body.get("calculate_compounding"):
         cload_kw = safe_float(body.get("connected_load_kw"))
         if cload_kw <= 0:
@@ -471,13 +473,45 @@ def case_calculate(case_id: str):
 
 @bp.post("/cases/<case_id>/compounding")
 def case_compounding(case_id: str):
+    """
+    Set compounding for a case.
+
+    Two modes:
+    1. MANUAL: Send {"amount": 18000} — directly set, no calculation
+    2. AUTO:   Send {"load_w": 2122} or {} — system calculates per KW
+
+    Manual mode is useful because compounding varies case-to-case
+    based on officer discretion, settlement, category changes etc.
+    """
     case = fetch_one("SELECT * FROM raid_cases WHERE case_id=?", (case_id,))
     if not case:
         return envelope_error("Case not found", status=404, code="NOT_FOUND")
+
+    body = get_json_body(request) or {}
+
+    # ===== MANUAL MODE — directly set amount =====
+    manual_amount = safe_float(body.get("amount") or body.get("compounding_amount"))
+    if manual_amount > 0:
+        execute(
+            "UPDATE raid_cases SET compounding_amount=?, updated_at=datetime('now') "
+            "WHERE case_id=?",
+            (manual_amount, case_id),
+        )
+        audit(body.get("user", "system"), "COMPOUNDING_MANUAL", "raid_cases",
+              case_id, new={"compounding_amount": manual_amount, "mode": "manual"})
+        return envelope_ok({
+            "ok": True,
+            "mode": "manual",
+            "compounding_amount": manual_amount,
+            "case_id": case_id,
+            "message": f"Compounding manually set: ₹{manual_amount:,.2f}",
+        })
+
+    # ===== AUTO MODE — calculate per KW =====
     consumer = (fetch_one("SELECT * FROM consumers WHERE id=?",
                           (case["consumer_id"],))
                 if case["consumer_id"] else {}) or {}
-    body = get_json_body(request) or {}
+
     load_w = safe_float(body.get("load_w"))
     if load_w <= 0:
         load_kw = safe_float(body.get("load_kw")) \
@@ -492,11 +526,13 @@ def case_compounding(case_id: str):
     })
     if not result.get("ok"):
         return envelope_error(result["error"], status=400)
+
     execute(
         "UPDATE raid_cases SET compounding_amount=?, updated_at=datetime('now') "
         "WHERE case_id=?",
         (result["compounding_amount"], case_id),
     )
+    result["mode"] = "auto_calculated"
     return envelope_ok(result)
 
 
