@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>विद्युत चोरी रेड प्रबंधन सिस्टम</title>
+  <link rel="stylesheet" href="/frontend/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-hi">विद्युत चोरी रेड प्रबंधन सिस्टम</div>
+      <div class="brand-en">Raid Management System</div>
+    </div>
+    <div class="health" id="healthBadge">
+      <span class="dot" id="healthDot"></span>
+      <span id="healthText">checking…</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="new-case">New Case</button>
+    <button class="tab" data-tab="cases">Cases</button>
+    <button class="tab" data-tab="search">Search</button>
+    <button class="tab" data-tab="backup">Backup</button>
+    <button class="tab" data-tab="reports">Reports</button>
+  </nav>
+
+  <main class="content">
+    <!-- ============================ DASHBOARD ============================ -->
+    <section class="panel active" id="panel-dashboard">
+      <h2>Dashboard</h2>
+
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Total Cases</div>
+          <div class="kpi-value" id="kpiCases">—</div></div>
+        <div class="kpi"><div class="kpi-label">Total Assessment ₹</div>
+          <div class="kpi-value" id="kpiAssessment">—</div></div>
+        <div class="kpi"><div class="kpi-label">Today Payments</div>
+          <div class="kpi-value" id="kpiPayCount">—</div></div>
+        <div class="kpi"><div class="kpi-label">Today Amount ₹</div>
+          <div class="kpi-value" id="kpiPayAmt">—</div></div>
+      </div>
+
+      <div class="actions-row">
+        <button class="btn primary" data-action="refresh-dashboard">Refresh</button>
+        <button class="btn" data-action="import-master">Import Master Data</button>
+        <button class="btn" data-action="backup-now">Backup Now</button>
+      </div>
+
+      <h3>Timeline Alerts</h3>
+      <div class="card" id="alertsBox">Loading…</div>
+
+      <h3>Last Import Report</h3>
+      <div class="card scroll-x" id="importReportBox">No import run yet.</div>
+    </section>
+
+    <!-- ============================ NEW CASE ============================ -->
+    <section class="panel" id="panel-new-case">
+      <h2>New Case</h2>
+
+      <div class="form-grid two-col">
+        <div>
+          <label>Account No. <input id="f_account" type="text" /></label>
+          <label>Name (नाम) <input id="f_name" type="text" lang="hi" /></label>
+          <label>Father / पिता <input id="f_father" type="text" lang="hi" /></label>
+          <label>Village / गाँव <input id="f_village" type="text" lang="hi" /></label>
+          <label>Post Office <input id="f_post" type="text" /></label>
+          <label>Pin Code <input id="f_pin" type="text" /></label>
+          <label>Mobile <input id="f_mobile" type="text" /></label>
+        </div>
+        <div>
+          <label>Section
+            <select id="f_section">
+              <option value="135">135</option>
+              <option value="138">138</option>
+              <option value="126">126</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>Inspection Date <input id="f_inspection" type="date" /></label>
+          <label>Category
+            <select id="f_category">
+              <option>LMV-1</option><option>LMV-2</option><option>LMV-3</option>
+              <option>LMV-4</option><option>LMV-5</option><option>LMV-6</option>
+              <option>LMV-7</option><option>LMV-8</option><option>LMV-9</option>
+            </select>
+          </label>
+          <label>Connected Load (kW) <input id="f_load" type="number" step="0.001" /></label>
+          <label>Supply Type
+            <select id="f_supply">
+              <option>Domestic</option><option>Commercial</option><option>Industrial</option>
+            </select>
+          </label>
+          <label>J.E. Name <input id="f_je" type="text" /></label>
+          <label>Sub-Substation <input id="f_substation" type="text" /></label>
+          <label>Checking Type
+            <select id="f_checking">
+              <option>Vigilance</option><option>Routine</option><option>Special</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <h3>Devices (LFHD)</h3>
+      <table class="data-table" id="devicesTable">
+        <thead>
+          <tr>
+            <th>#</th><th>Device</th><th>Load (W)</th><th>Factor</th>
+            <th>Hours/day</th><th>Days</th><th>Units</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="devicesBody"></tbody>
+      </table>
+      <div class="actions-row">
+        <button class="btn" data-action="add-device">+ Add Device</button>
+        <button class="btn" data-action="add-sample">+ Sample 3 Devices</button>
+        <button class="btn primary" data-action="live-calc">Live Calculate</button>
+        <button class="btn primary" data-action="save-case">Save Case</button>
+        <button class="btn" data-action="offense-check">Offense Check</button>
+        <button class="btn" data-action="generate-all-docs">Generate All Documents</button>
+      </div>
+
+      <h3>Calculation Result</h3>
+      <div class="card" id="calcResult">Press <b>Live Calculate</b> after entering devices.</div>
+
+      <h3>Saved Case</h3>
+      <div class="card" id="savedCase">No case saved yet.</div>
+    </section>
+
+    <!-- ============================ CASES ============================ -->
+    <section class="panel" id="panel-cases">
+      <h2>Cases</h2>
+      <div class="actions-row">
+        <button class="btn primary" data-action="refresh-cases">Refresh</button>
+        <input id="cases_filter" placeholder="Filter (status / account / name)…" />
+      </div>
+      <div class="scroll-x">
+        <table class="data-table" id="casesTable">
+          <thead>
+            <tr><th>Case ID</th><th>Account</th><th>Name</th><th>Section</th>
+                <th>Inspection</th><th>Assessment ₹</th><th>Compounding ₹</th>
+                <th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="casesBody"></tbody>
+        </table>
+      </div>
+
+      <h3 id="casesDetailHeader" style="display:none">Case Details</h3>
+      <div class="card" id="casesDetail" style="display:none"></div>
+
+      <h3 id="casesPaymentsHeader" style="display:none">Payments</h3>
+      <div id="casesPaymentsWrap" style="display:none">
+        <div class="actions-row">
+          <button class="btn primary" data-action="record-payment">+ Record Payment</button>
+        </div>
+        <div class="scroll-x"><table class="data-table" id="paymentsTable">
+          <thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Component</th>
+                     <th>Receipt</th><th>Method</th><th>Remarks</th></tr></thead>
+          <tbody id="paymentsBody"></tbody>
+        </table></div>
+      </div>
+
+      <h3 id="casesNoticesHeader" style="display:none">Notices</h3>
+      <div id="casesNoticesWrap" style="display:none">
+        <div class="actions-row">
+          <button class="btn" data-action="add-notice" data-kind="provisional">+ Provisional</button>
+          <button class="btn" data-action="add-notice" data-kind="section3">+ Section 3</button>
+          <button class="btn" data-action="add-notice" data-kind="section5">+ Section 5</button>
+        </div>
+        <div class="scroll-x"><table class="data-table" id="noticesTable">
+          <thead><tr><th>Type</th><th>Number</th><th>Date</th><th>Due</th>
+                     <th>Status</th><th>Dispatch</th></tr></thead>
+          <tbody id="noticesBody"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ============================ SEARCH ============================ -->
+    <section class="panel" id="panel-search">
+      <h2>Consumer Search</h2>
+      <div class="form-grid three-col">
+        <label>Account <input id="s_account" type="text" /></label>
+        <label>Name <input id="s_name" type="text" lang="hi" /></label>
+        <label>Village <input id="s_village" type="text" lang="hi" /></label>
+      </div>
+      <div class="actions-row">
+        <button class="btn primary" data-action="run-search">Search</button>
+      </div>
+      <div class="scroll-x">
+        <table class="data-table" id="searchTable">
+          <thead><tr><th>Account</th><th>Name</th><th>Father</th><th>Village</th>
+                     <th>Mobile</th><th>Category</th><th>Action</th></tr></thead>
+          <tbody id="searchBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================ BACKUP ============================ -->
+    <section class="panel" id="panel-backup">
+      <h2>Backup</h2>
+      <div class="actions-row">
+        <button class="btn primary" data-action="backup-now">Backup Now</button>
+        <button class="btn" data-action="refresh-backups">Refresh List</button>
+        <button class="btn" data-action="backup-status">Status</button>
+      </div>
+      <div class="card" id="backupStatus">Press <b>Status</b> to load.</div>
+
+      <h3>Existing Backups</h3>
+      <div class="scroll-x">
+        <table class="data-table" id="backupTable">
+          <thead><tr><th>Name</th><th>Size (KB)</th><th>Modified</th><th>Action</th></tr></thead>
+          <tbody id="backupBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================ REPORTS ============================ -->
+    <section class="panel" id="panel-reports">
+      <h2>Reports & Exports</h2>
+      <div class="actions-row">
+        <button class="btn primary" data-action="report" data-kind="cases">Cases (xlsx)</button>
+        <button class="btn primary" data-action="report" data-kind="payments">Payments (xlsx)</button>
+        <button class="btn primary" data-action="report" data-kind="notices">Notices (xlsx)</button>
+        <button class="btn primary" data-action="report" data-kind="dashboard">Dashboard (PDF)</button>
+        <button class="btn" data-action="refresh-reports">Refresh List</button>
+      </div>
+      <div class="scroll-x">
+        <table class="data-table" id="reportsTable">
+          <thead><tr><th>Name</th><th>Size (KB)</th><th>Modified</th><th>Action</th></tr></thead>
+          <tbody id="reportsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <footer class="footer">
+    <span>Raid Management System v1.0.0</span>
+    <span>API: <code id="apiBase"></code></span>
+  </footer>
+
+  <script src="/frontend/static/app.js"></script>
+</body>
+</html>

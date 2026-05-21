@@ -6,23 +6,44 @@ UPPCL-style electricity theft case management system. **Excel + Python (Flask + 
 
 ---
 
-## Quick Start (Windows — User's machine)
+## Quick Start (Windows — single-click)
 
 ### 1. Prerequisites
-- **Python 3.10+** ([download](https://www.python.org/downloads/))
-- **Microsoft Excel** with macros enabled (Trust Center → Macro Settings → Enable VBA)
+- **Python 3.10+** — [download](https://www.python.org/downloads/) and tick
+  **"Add Python to PATH"** during install.
+- (Optional) **Microsoft Excel** if you want the macro front-end too. The
+  browser UI does **not** need Excel.
 
-### 2. Clone & Install
+### 2. Get the code
 ```cmd
 git clone https://github.com/sangeetpandey1-afk/RAID-TOOL.git
 cd RAID-TOOL
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
 ```
 
-### 3. Place Master-Data Files
-Copy these Excel files into the `master_data/` folder (any of the variants are accepted):
+### 3. Install — double-click `install.bat`
+The installer creates a local `venv\`, installs every Python dependency,
+generates the 9 Word templates, builds the Excel starter workbook, and
+warms up the SQLite schema. It is safe to re-run.
+
+### 4. Run — double-click `run.bat`
+Activates the venv, opens **http://localhost:5000/** in your default
+browser, and runs the Flask backend in the same console window.
+
+> Press **Ctrl+C** in the console window to stop the server.
+
+That's it. The browser UI now has six tabs:
+
+| Tab        | What you can do |
+|------------|-----------------|
+| Dashboard  | KPIs, import master data, backup, timeline alerts |
+| New Case   | Consumer info + LFHD devices + live calc + save case + offense check + generate all 9 documents |
+| Cases      | List, filter, open a case, record payments, add notices |
+| Search     | Multi-field consumer search with one-click "Use" → fills New Case |
+| Backup     | Backup now, list backups, download zip |
+| Reports    | Generate cases.xlsx / payments.xlsx / notices.xlsx / dashboard.pdf and download |
+
+### 5. (Optional) Place Master-Data Files
+Copy these Excel files into the `master_data\` folder (any variant works):
 
 | Required content                  | Accepted file names |
 |----------------------------------|---------------------|
@@ -33,33 +54,32 @@ Copy these Excel files into the `master_data/` folder (any of the variants are a
 | Rate slabs                       | `slab_rates.xlsx` |
 | Account mapping (optional)       | `account_mapping.xlsx` |
 
-### 4. Generate the default Word templates (one-time)
-```cmd
-python scripts\generate_default_templates.py
-```
-This creates 9 `.docx` files in `templates/` with `{{ FIELD }}` placeholders.
-Officers can later edit them in Word while keeping the placeholders.
+Then click **"Import Master Data"** on the Dashboard tab (or
+`POST /api/import_all_master_data`).
 
-### 5. Initialize DB & Run Backend
+### 6. (Optional) Excel VBA Front-end
+If you also want the Excel macro UI:
+
+1. In Excel: *File → Options → Trust Center → Trust Center Settings →
+   Macro Settings → ✅ "Trust access to the VBA project object model"*.
+2. Double-click `install_vba.bat`.
+3. Open the generated `frontend\RaidSystem.xlsm`.
+
+The VBA UI talks to the same `/api/*` endpoints, so the browser and Excel
+front-ends can be used interchangeably.
+
+---
+
+## Manual install (if you prefer)
 ```cmd
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python scripts\generate_default_templates.py
+python frontend\build_xlsm.py
 python -m backend.app
 ```
-Server starts on `http://localhost:5000`. The DB (`raid_database.db`) is created automatically on first run.
-
-### 6. Build the Excel UI (one-time)
-```cmd
-python frontend\build_xlsm.py
-```
-Open `frontend/RaidSystem.xlsx`, **Save As .xlsm**, then **Alt+F11 → File → Import** every `.bas` and `.cls` from `frontend/vba/` (15 files total). See
-[`frontend/RaidSystem_README.md`](./frontend/RaidSystem_README.md) for the full
-button-to-macro mapping.
-
-### 7. Import Master Data
-Once the server is up, hit:
-```cmd
-curl -X POST http://localhost:5000/api/import_all_master_data
-```
-or use the **"Import Master Data"** button in the Excel UI.
+Then open http://localhost:5000/ in your browser.
 
 ---
 
@@ -155,8 +175,11 @@ On error:
 
 ```
 RAID-TOOL/
+├── install.bat                 # One-click Windows installer (venv + deps + templates + xlsx)
+├── run.bat                     # One-click launcher (server + browser auto-open)
+├── install_vba.bat             # Optional: bulk-import VBA modules into RaidSystem.xlsm
 ├── backend/
-│   ├── app.py                  # Flask main entry — 55 routes, 11 blueprints
+│   ├── app.py                  # Flask main entry — 59 routes, 11 blueprints, serves /frontend/
 │   ├── config.py               # Paths, ports, defaults, business rules
 │   ├── database.py             # SQLite schema + connection
 │   ├── routes/                 # HTTP routes (blueprints)
@@ -181,33 +204,22 @@ RAID-TOOL/
 │   │   └── reports.py          # Phase 4
 │   └── models/schema.sql
 ├── frontend/
+│   ├── index.html              # Browser UI entry point (served at /frontend/)
+│   ├── static/
+│   │   ├── styles.css          # Offline-first styles, no CDN
+│   │   └── app.js              # Vanilla JS, fetch API
 │   ├── RaidSystem_README.md    # VBA setup guide
-│   ├── RaidSystem.xlsx         # Starter workbook (9 sheets, 20 named ranges)
+│   ├── RaidSystem.xlsx         # Starter workbook (built by install.bat)
 │   ├── build_xlsm.py           # Regenerator script
-│   └── vba/
-│       ├── modConfig.bas       # Central config + named-range helpers
-│       ├── modJson.bas         # Tiny JSON encoder/decoder (no refs needed)
-│       ├── modApiClient.bas    # MSXML2.XMLHTTP HTTP wrapper
-│       ├── modUtils.bas        # Common helpers
-│       ├── modCalculator.bas   # Live LFHD calculation
-│       ├── modCaseSave.bas     # Save case end-to-end
-│       ├── modConsumerSearch.bas
-│       ├── modOffense.bas
-│       ├── modDocuments.bas    # Generate one / all documents
-│       ├── modPayment.bas
-│       ├── modNotice.bas
-│       ├── modImport.bas       # Master-data import trigger
-│       ├── modReports.bas
-│       ├── modBackup.bas
-│       ├── modCases.bas        # Cases list refresh
-│       └── ThisWorkbook.cls    # Auto health check on workbook open
+│   ├── import_vba.vbs          # Bulk VBA importer (used by install_vba.bat)
+│   └── vba/                    # 15 VBA modules + ThisWorkbook.cls
 ├── templates/                  # 9 default .docx templates with {{ FIELD }}
 ├── master_data/                # Place Excel master files here (gitignored)
 ├── docs/                       # Generated documents (runtime, gitignored)
 ├── backup/                     # Backups + reports/<name> (gitignored)
 ├── logs/                       # Server logs (gitignored)
 ├── scripts/
-│   ├── smoke_test.sh           # End-to-end curl smoke test
+│   ├── smoke_test.sh           # End-to-end curl smoke test (23 sections)
 │   └── generate_default_templates.py
 ├── requirements.txt
 └── .kiro/steering/project-spec.md
@@ -267,10 +279,12 @@ Total_Units      = Σ Units_per_device
 | Document generation (9 kinds) | ✅ |
 | Default Word templates with `{{ FIELD }}` placeholders | ✅ |
 | Payment / Inquiry / Notice + timeline alerts | ✅ |
-| **Excel VBA frontend (15 modules + starter workbook)** | ✅ |
-| **Reports & exports (xlsx + PDF)** | ✅ |
-| **Backup (local zip + optional Google Drive)** | ✅ |
-| End-to-end smoke test (15 curl checks) | ✅ |
+| **Browser UI (`/frontend/`, 6 tabs, offline-first)** | ✅ |
+| **One-click installer (`install.bat`) and launcher (`run.bat`)** | ✅ |
+| Excel VBA frontend (15 modules + bulk-import script) | ✅ |
+| Reports & exports (xlsx + PDF) | ✅ |
+| Backup (local zip + optional Google Drive) | ✅ |
+| End-to-end smoke test (23 curl checks) | ✅ |
 
 ---
 

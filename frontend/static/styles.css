@@ -1,0 +1,194 @@
+/* ==================================================================
+   Raid Management System — local UI styles (offline-first, no CDN)
+   ================================================================== */
+
+:root {
+  --bg:        #f4f6f9;
+  --surface:   #ffffff;
+  --border:    #d8dde6;
+  --text:      #1f2937;
+  --muted:     #6b7280;
+  --primary:   #305496;
+  --primary-d: #213d70;
+  --accent:    #1f7a1f;
+  --warn:      #b45309;
+  --danger:    #b91c1c;
+  --ok:        #16a34a;
+  --row-alt:   #fafbfc;
+  --shadow:    0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Segoe UI", "Mangal", "Nirmala UI", system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* --------------------------------------------------- top bar */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-d) 100%);
+  color: white;
+  box-shadow: var(--shadow);
+}
+.brand-hi { font-size: 18px; font-weight: 600; line-height: 1.2; }
+.brand-en { font-size: 12px; opacity: 0.85; }
+.health {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 999px;
+  font-size: 12px;
+}
+.dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #888; display: inline-block;
+}
+.dot.ok    { background: #4ade80; box-shadow: 0 0 4px rgba(74,222,128,0.7); }
+.dot.fail  { background: #f87171; }
+.dot.busy  { background: #facc15; }
+
+/* --------------------------------------------------- tabs */
+.tabs {
+  display: flex; gap: 2px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 12px; overflow-x: auto;
+}
+.tab {
+  background: transparent; border: 0; padding: 12px 16px;
+  font-size: 14px; cursor: pointer; color: var(--muted);
+  border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.tab:hover { color: var(--primary); background: #eef2f8; }
+.tab.active {
+  color: var(--primary); font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+
+/* --------------------------------------------------- panels */
+.content { padding: 20px; }
+.panel { display: none; }
+.panel.active { display: block; animation: fade 0.15s ease-out; }
+@keyframes fade { from {opacity: 0; transform: translateY(2px);} to {opacity:1; transform:none;} }
+
+h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px; color: var(--primary); }
+h3 { font-size: 14px; font-weight: 600; margin: 18px 0 8px; color: var(--text); }
+
+/* --------------------------------------------------- KPI cards */
+.kpi-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin-bottom: 16px;
+}
+.kpi {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 6px; padding: 12px 14px; box-shadow: var(--shadow);
+}
+.kpi-label { color: var(--muted); font-size: 12px; }
+.kpi-value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+
+/* --------------------------------------------------- buttons */
+.actions-row {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px;
+  align-items: center;
+}
+.actions-row input { flex: 1 1 240px; }
+.btn {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 8px 14px; border-radius: 4px;
+  font-size: 13px; cursor: pointer; font-family: inherit;
+  transition: background 0.1s, border-color 0.1s;
+}
+.btn:hover { background: #f0f3f8; border-color: #b9c2d3; }
+.btn:active { transform: translateY(1px); }
+.btn.primary {
+  background: var(--primary); border-color: var(--primary); color: white;
+}
+.btn.primary:hover { background: var(--primary-d); border-color: var(--primary-d); }
+.btn.small { padding: 4px 8px; font-size: 12px; }
+
+/* --------------------------------------------------- forms */
+.form-grid { display: grid; gap: 14px; margin-bottom: 12px; }
+.form-grid.two-col   { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-grid.three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 800px) {
+  .form-grid.two-col, .form-grid.three-col { grid-template-columns: 1fr; }
+}
+.form-grid > div { display: grid; gap: 10px; }
+label {
+  display: flex; flex-direction: column; gap: 4px;
+  color: var(--muted); font-size: 12px; font-weight: 500;
+}
+input, select, textarea {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: 4px; font-size: 13px; font-family: inherit;
+  color: var(--text); background: var(--surface);
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid #c7d2e6; border-color: var(--primary);
+}
+
+/* --------------------------------------------------- tables */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; overflow: hidden;
+  font-size: 13px;
+}
+.data-table thead th {
+  background: var(--primary); color: white; font-weight: 600;
+  padding: 9px 10px; text-align: left; white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 8px 10px; border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.data-table tbody tr:nth-child(even) { background: var(--row-alt); }
+.data-table tbody tr:hover { background: #eef2f8; cursor: default; }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.scroll-x { overflow-x: auto; max-width: 100%; }
+
+/* --------------------------------------------------- card */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px 14px; box-shadow: var(--shadow);
+  white-space: pre-wrap; word-break: break-word;
+}
+.card pre { margin: 0; font-family: ui-monospace, "Cascadia Code", "Consolas", monospace; font-size: 12px; }
+
+/* --------------------------------------------------- status pills */
+.pill {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; line-height: 1.6;
+  background: #e5e7eb; color: var(--muted); white-space: nowrap;
+}
+.pill.green  { background: #dcfce7; color: #166534; }
+.pill.yellow { background: #fef9c3; color: #854d0e; }
+.pill.red    { background: #fee2e2; color: #991b1b; }
+.pill.blue   { background: #dbeafe; color: #1e40af; }
+
+/* --------------------------------------------------- toast */
+.toast {
+  position: fixed; bottom: 18px; right: 18px;
+  background: #111827; color: white; padding: 10px 14px;
+  border-radius: 6px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  opacity: 0; pointer-events: none; transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s; max-width: 360px;
+  z-index: 9999;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: var(--danger); }
+.toast.ok    { background: var(--ok); }
+
+/* --------------------------------------------------- footer */
+.footer {
+  margin-top: 30px; padding: 10px 20px;
+  background: var(--surface); border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.footer code { background: #eef2f8; padding: 1px 6px; border-radius: 3px; }

@@ -15,13 +15,15 @@ import sys
 import traceback
 from logging.handlers import RotatingFileHandler
 
-from flask import Flask, request
+from flask import Flask, redirect, request, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
 from . import config
 from .database import close_connection, init_schema
 from .utils import envelope_ok, envelope_error
+
+FRONTEND_DIR = config.ROOT_DIR / "frontend"
 
 
 # ----------------------------------------------------------------- logging
@@ -108,14 +110,47 @@ def create_app() -> Flask:
     def _teardown(exc):
         close_connection(exc)
 
+    # ----------------- frontend (browser UI) -------------------------
+    # GET /            -> redirect to /frontend/
+    # GET /frontend/   -> serve frontend/index.html
+    # GET /frontend/<f>-> serve frontend/<f>  (css, js, xlsx, etc.)
+    # GET /api         -> JSON envelope (for API clients/curl)
     @app.route("/")
     def _root():
+        return redirect("/frontend/", code=302)
+
+    @app.route("/frontend/")
+    @app.route("/frontend/index.html")
+    def _frontend_index():
+        if not (FRONTEND_DIR / "index.html").exists():
+            return envelope_error(
+                "frontend/index.html not found. Run install.bat or the "
+                "ship-with-repo file is missing.", status=500,
+                code="UI_MISSING")
+        return send_from_directory(FRONTEND_DIR, "index.html")
+
+    @app.route("/frontend/<path:filename>")
+    def _frontend_static(filename: str):
+        # Prevent path traversal — send_from_directory enforces, but be explicit
+        if ".." in filename:
+            return envelope_error("Bad path", status=400, code="BAD_PATH")
+        target = FRONTEND_DIR / filename
+        if not target.exists():
+            return envelope_error(f"frontend file not found: {filename}",
+                                  status=404, code="UI_FILE_NOT_FOUND")
+        return send_from_directory(FRONTEND_DIR, filename)
+
+    @app.route("/api")
+    def _api_root():
         return envelope_ok({
             "service": "Raid Management System",
             "version": "1.0.0",
-            "docs": "/api/health",
+            "ui":      "/frontend/",
+            "health":  "/api/health",
         })
 
+    log.info("Frontend dir: %s (exists=%s)", FRONTEND_DIR,
+             (FRONTEND_DIR / "index.html").exists())
     log.info("App ready. Routes registered: %d", len(list(app.url_map.iter_rules())))
     return app
 
