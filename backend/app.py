@@ -79,10 +79,11 @@ def create_app() -> Flask:
     from .routes.upload import bp as upload_bp
     from .routes.mobile import bp as mobile_bp
     from .routes.export import bp as export_bp
+    from .routes.appeal import bp as appeal_bp
 
     for bp in (health_bp, master_bp, consumer_bp, case_bp, doc_bp,
                payment_bp, inquiry_bp, notice_bp, devrate_bp,
-               upload_bp, mobile_bp, export_bp):
+               upload_bp, mobile_bp, export_bp, appeal_bp):
         app.register_blueprint(bp)
 
     # ----------------- error handlers (no more silent 500s) ----------
