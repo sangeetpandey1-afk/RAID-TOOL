@@ -186,27 +186,27 @@ def notices_xlsx() -> Path:
     rows = fetch_all(
         """
         SELECT n.id, n.case_id, n.notice_type, n.notice_number,
-               n.notice_date, n.due_date, n.status, n.dispatch_method,
+               n.dispatch_date AS notice_date, n.due_date, n.status,
                n.created_at,
                c.name AS consumer_name, c.village
           FROM notices n
           LEFT JOIN raid_cases rc ON rc.case_id = n.case_id
           LEFT JOIN consumers c ON c.id = rc.consumer_id
-         ORDER BY n.notice_date DESC, n.id DESC
+         ORDER BY COALESCE(n.dispatch_date, n.created_at) DESC, n.id DESC
         """
     )
     wb = Workbook()
     ws = wb.active
     ws.title = "Notices"
     headers = ["ID", "Case ID", "Type", "Notice #", "Notice Date",
-               "Due Date", "Status", "Dispatch", "Created",
+               "Due Date", "Status", "Created",
                "Consumer", "Village"]
     _write_header(ws, headers)
     for r in rows:
         ws.append([
             r["id"], r["case_id"], r["notice_type"], r["notice_number"],
             r["notice_date"], r["due_date"], r["status"],
-            r["dispatch_method"], r["created_at"],
+            r["created_at"],
             r["consumer_name"], r["village"],
         ])
     _autosize(ws)

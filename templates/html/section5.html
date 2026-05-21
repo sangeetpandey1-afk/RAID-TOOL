@@ -1,0 +1,59 @@
+{% extends "_layout.html" %}
+{% block title %}Section 5 / RC — {{ ctx.disno }}{% endblock %}
+{% block content %}
+
+<h1>धारा 5 — राजस्व वसूली प्रमाण-पत्र</h1>
+<h2>Section 5 — Revenue Recovery Certificate (RRC)</h2>
+
+<p class="right small">
+  RC No.: <b>{{ ctx.rc_number or ctx.disno + "-RC" }}</b> ·
+  Letter No.: {{ ctx.letter_number or "—" }} ·
+  Date: <b>{{ ctx.current_date }}</b>
+</p>
+
+<p>
+  सेवा में,<br/>
+  श्रीमान <b>तहसीलदार / जिलाधिकारी</b>,<br/>
+  तहसील  {{ ctx.tehsil or "—" }},  जनपद  {{ ctx.district or "—" }}
+</p>
+
+<p>
+  <b>विषय:</b> उपभोक्ता <b>{{ ctx.consumer_name }}</b> पुत्र
+  {{ ctx.consumer_father }} के विरुद्ध बकाया राशि
+  <b>₹ {{ ctx.outstanding_amount }}</b> की राजस्व वसूली हेतु प्रमाण-पत्र।
+</p>
+
+<p>
+  महोदय,<br/>
+  उपरोक्त उपभोक्ता निवासी ग्राम <b>{{ ctx.village }}</b>, पोस्ट
+  {{ ctx.post_office }}, पर इस कार्यालय की निम्नलिखित कार्यवाही के
+  बावजूद बकाया राशि का भुगतान नहीं किया गया है:
+</p>
+
+<table class="kv">
+  <tr><td class="label">Checking Report</td>
+      <td>{{ ctx.checking_report_number or "—" }} dt {{ ctx.checking_date }}</td></tr>
+  <tr><td class="label">Demand Notice (Sec 3)</td>
+      <td>{{ ctx.demand_notice_number or "—" }} dt {{ ctx.demand_notice_date or "—" }}</td></tr>
+  <tr><td class="label">SE / Grid Letter</td>
+      <td>{{ ctx.grid_number or "—" }} dt {{ ctx.grid_date or "—" }}</td></tr>
+  <tr><td class="label">खाता संख्या / Account</td><td>{{ ctx.ACCOUNT_ID }}</td></tr>
+  <tr><td class="label bold">Outstanding</td>
+      <td class="num bold">₹ {{ ctx.outstanding_amount }}</td></tr>
+</table>
+
+<p>
+  अतः अनुरोध है कि उक्त राशि <b>भू-राजस्व</b> की भांति वसूल कर इस
+  कार्यालय को सूचित करें। वसूली पश्चात समस्त अभिलेख सहित सूचना उपलब्ध
+  कराने का कष्ट करें।
+</p>
+
+<div class="sign-grid">
+  <div class="box">कार्यालय की मुहर</div>
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+</div>
+
+<p class="small" style="margin-top:8mm">
+  प्रति / Cc: अधीक्षण अभियन्ता · मुख्य अभियन्ता · राजस्व निर्धारण पटल · केस फाइल
+</p>
+{% endblock %}

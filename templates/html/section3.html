@@ -1,0 +1,57 @@
+{% extends "_layout.html" %}
+{% block title %}Section 3 — {{ ctx.disno }}{% endblock %}
+{% block content %}
+
+<h1>धारा 3 के अंतर्गत मांग सूचना</h1>
+<h2>Demand Notice under Section 3</h2>
+
+<p class="right small">
+  Notice No.: <b>{{ ctx.sec3_no or ctx.disno + "-S3" }}</b> ·
+  Date: <b>{{ ctx.sec3_date }}</b>
+</p>
+
+<p>
+  सेवा में,<br/>
+  <b>{{ ctx.NAME }}</b><br/>
+  पुत्र / पति  {{ ctx.father_nane }}<br/>
+  ग्राम  {{ ctx.VILLAGE }}, पोस्ट  {{ ctx.post }}, पिन  {{ ctx.pin_code }}<br/>
+  मोबाइल: {{ ctx.MOBILE_NO }} ·  खाता संख्या: {{ ctx.ACCOUNT_ID }}
+</p>
+
+<p>
+  <b>विषय:</b> निरीक्षण दिनांक {{ ctx.dis_date }} (केस सं. {{ ctx.disno }})
+  के आधार पर अनन्तिम मूल्यांकन ₹ {{ ctx.ASSESMENT_TOTAL }} की वसूली हेतु
+  धारा 3 के अंतर्गत मांग सूचना।
+</p>
+
+<p>
+  महोदय,<br/>
+  उपरोक्त प्रकरण में आपके परिसर पर निरीक्षण दिनांक {{ ctx.dis_date }} को
+  जे.ई. {{ ctx.JE_NAME }} द्वारा विद्युत चोरी / अनधिकृत उपयोग पाया गया।
+  जिसके आधार पर अनन्तिम मूल्यांकन <b>₹ {{ ctx.ASSESMENT_TOTAL }}</b>
+  निर्धारित किया गया है। प्रशासनिक शुल्क ₹ 25.00 अतिरिक्त देय होगा।
+</p>
+
+<p>
+  कृपया <b>30 दिन</b> के भीतर पूर्ण भुगतान कर रसीद की प्रति इस कार्यालय
+  में जमा करें, अन्यथा <span class="red">धारा 5</span> के अंतर्गत राजस्व
+  वसूली की कार्यवाही प्रारम्भ की जाएगी।
+</p>
+
+<table class="kv">
+  <tr><td class="label">Assessment Amount</td>
+      <td class="num">₹ {{ ctx.sec3_amaunt }}</td></tr>
+  <tr><td class="label">Admin Charges</td><td class="num">₹ 25.00</td></tr>
+  <tr><td class="label bold">कुल देय / TOTAL PAYABLE</td>
+      <td class="num bold">₹ {{ ctx.total_sec3 }}</td></tr>
+</table>
+
+<div class="sign-grid">
+  <div class="box">कार्यालय की मुहर / Office Stamp</div>
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+</div>
+
+<p class="small" style="margin-top:8mm">
+  प्रति / Cc: अधीक्षण अभियन्ता · राजस्व निर्धारण पटल · केस फाइल
+</p>
+{% endblock %}

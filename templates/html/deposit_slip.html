@@ -1,0 +1,54 @@
+{% extends "_layout.html" %}
+{% block title %}Deposit Slip — {{ ctx.disno }}{% endblock %}
+{% block content %}
+
+<h1>जमा पर्ची</h1>
+<h2>Deposit Slip</h2>
+
+<table class="kv">
+  <tr><td class="label">Date</td><td>{{ ctx.Date }}</td>
+      <td class="label">Case ID</td><td>{{ ctx.disno }}</td></tr>
+  <tr><td class="label">Account No.</td><td>{{ ctx.ACCOUNT_ID }}</td>
+      <td class="label">Online No.</td><td>{{ ctx.ONLINE_NO or "—" }}</td></tr>
+  <tr><td class="label">Name</td><td>{{ ctx.NAME }}</td>
+      <td class="label">Father</td><td>{{ ctx.father_nane }}</td></tr>
+  <tr><td class="label">Village</td><td>{{ ctx.VILLAGE }}</td>
+      <td class="label">Mobile</td><td>{{ ctx.MOBILE_NO }}</td></tr>
+  <tr><td class="label">Section</td><td>{{ ctx.SECTION }}</td>
+      <td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td></tr>
+</table>
+
+<h3>देय राशि / Amounts Due</h3>
+<table class="kv">
+  <tr><td class="label">Assessment Amount</td>
+      <td class="num">₹ {{ ctx.ASSESMENT_TOTAL }}</td></tr>
+  <tr><td class="label">Compounding Charges (Sec 152)</td>
+      <td class="num">₹ {{ ctx.COMPOUNDING_AMOUNT }}</td></tr>
+  {% if ctx.admin_charges %}
+  <tr><td class="label">Admin Charges</td>
+      <td class="num">₹ {{ ctx.admin_charges }}</td></tr>
+  {% endif %}
+  <tr><td class="label bold">कुल / TOTAL</td>
+      <td class="num bold">₹ {{ ctx.ASSESMENT_TOTAL }}</td></tr>
+</table>
+
+<div style="margin-top:8mm; padding: 4mm; border: 1.5pt solid #b91c1c; border-radius: 3pt; background: #fef2f2">
+  <p class="red bold" style="margin:0">
+    महत्वपूर्ण सूचना:<br/>
+    यह धनराशि जमा करने के उपरान्त प्राप्त रसीद की छायाप्रति खण्ड कार्यालय
+    के राजस्व निर्धारण पटल पर अवश्य जमा करा दें जिससे भविष्य की कार्यवाही
+    जैसे पोर्टल पर अपलोड करना पत्र निर्गत् करना आदि हो सके।
+  </p>
+</div>
+
+<table class="kv" style="margin-top:10mm">
+  <tr>
+    <td class="label">रसीद संख्या / Receipt No.</td><td></td>
+    <td class="label">जमा दिनांक / Deposit Date</td><td></td>
+  </tr>
+  <tr>
+    <td class="label">कैशियर हस्ताक्षर / Cashier Sign</td><td></td>
+    <td class="label">कार्यालय मुहर / Office Stamp</td><td></td>
+  </tr>
+</table>
+{% endblock %}

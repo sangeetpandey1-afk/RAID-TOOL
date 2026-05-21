@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}{{ ctx.disno or "Document" }}{% endblock %}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+    * { box-sizing: border-box; }
+    html, body {
+      font-family: "Mangal", "Nirmala UI", "Noto Sans Devanagari",
+                   "Segoe UI", system-ui, sans-serif;
+      font-size: 12pt; color: #111; line-height: 1.5;
+      margin: 0; padding: 0; background: #ececec;
+    }
+    .page {
+      background: #fff; width: 210mm; min-height: 297mm;
+      margin: 8mm auto; padding: 18mm 16mm;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .doc-toolbar {
+      position: sticky; top: 0;
+      background: #1f2937; color: #fff;
+      padding: 10px 16px;
+      display: flex; gap: 12px; align-items: center;
+      font-family: system-ui, "Segoe UI", sans-serif; font-size: 13px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2); z-index: 10;
+    }
+    .doc-toolbar button {
+      background: #305496; color: #fff; border: 0;
+      padding: 6px 14px; border-radius: 4px; cursor: pointer;
+      font-size: 13px; font-family: inherit;
+    }
+    .doc-toolbar button:hover { background: #213d70; }
+    .doc-toolbar a { color: #93c5fd; text-decoration: none; }
+    .doc-toolbar .meta { margin-left: auto; opacity: 0.85; }
+
+    h1, h2, h3 { margin: 0 0 8mm 0; }
+    h1 { text-align: center; font-size: 17pt; }
+    h2 { text-align: center; font-size: 13pt; color: #305496; margin-bottom: 6mm; }
+    h3 { font-size: 12pt; color: #305496; margin: 6mm 0 2mm;
+         border-bottom: 0.5pt solid #305496; padding-bottom: 2pt; }
+    p  { margin: 0 0 4mm 0; text-align: justify; }
+    .right   { text-align: right; }
+    .center  { text-align: center; }
+    .red     { color: #b91c1c; font-weight: bold; }
+    .small   { font-size: 10pt; color: #555; }
+    .num     { text-align: right; font-variant-numeric: tabular-nums; }
+    .bold    { font-weight: bold; }
+
+    .doc-header {
+      border-bottom: 1.5pt solid #305496;
+      padding-bottom: 4mm; margin-bottom: 6mm;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+    .doc-header .title-block { line-height: 1.2; }
+    .doc-header .title-block .hi { font-size: 14pt; font-weight: bold; }
+    .doc-header .title-block .en { font-size: 10pt; color: #555; }
+    .doc-header .ref { text-align: right; font-size: 10pt; color: #444; }
+
+    table.kv { width: 100%; border-collapse: collapse; margin: 4mm 0; }
+    table.kv td { border: 0.5pt solid #999; padding: 3pt 6pt; vertical-align: top; }
+    table.kv td.label { width: 36%; background: #f4f6fa; font-weight: bold; }
+
+    table.data { width: 100%; border-collapse: collapse; margin: 4mm 0; font-size: 11pt; }
+    table.data th { background: #305496; color: white; padding: 4pt 6pt;
+                    border: 0.5pt solid #305496; text-align: left; }
+    table.data td { border: 0.5pt solid #b8c1d2; padding: 3pt 6pt; }
+    table.data tr:nth-child(even) td { background: #fafbfc; }
+
+    .totals-row { background: #fef9c3 !important; font-weight: bold; }
+    .total-banner {
+      background: #305496; color: #fff; padding: 6pt 12pt;
+      border-radius: 3pt; display: inline-block; margin-top: 4mm;
+      font-size: 13pt; font-weight: bold;
+    }
+
+    .sign-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12mm;
+      margin-top: 14mm;
+    }
+    .sign-grid .box {
+      border-top: 0.5pt solid #444; padding-top: 2mm;
+      text-align: center; font-size: 11pt;
+    }
+
+    .watermark {
+      position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(-22deg);
+      font-size: 80pt; color: rgba(48, 84, 150, 0.07);
+      font-weight: bold; pointer-events: none; letter-spacing: 4pt;
+    }
+
+    @media print {
+      html, body { background: #fff; }
+      .doc-toolbar { display: none !important; }
+      .page { margin: 0; box-shadow: none; width: auto; min-height: auto; padding: 0; }
+      a { color: #111; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-toolbar">
+    <button onclick="window.print()">🖨 Print</button>
+    <a href="javascript:window.close();">Close</a>
+    <span class="meta">
+      Case: <b>{{ ctx.disno or "—" }}</b> ·
+      {{ ctx.NAME or "" }} · {{ ctx.Date }}
+    </span>
+  </div>
+  <div class="page">
+    {% block watermark %}{% endblock %}
+    <div class="doc-header">
+      <div class="title-block">
+        <div class="hi">उत्तर प्रदेश पावर कॉर्पोरेशन लिमिटेड</div>
+        <div class="en">U.P. Power Corporation Ltd. — Division {{ ctx.Div_no or "—" }}</div>
+      </div>
+      <div class="ref">
+        Case No.: <b>{{ ctx.disno }}</b><br/>
+        Date: {{ ctx.Date }}{% if ctx.time11 %} {{ ctx.time11 }}{% endif %}
+      </div>
+    </div>
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

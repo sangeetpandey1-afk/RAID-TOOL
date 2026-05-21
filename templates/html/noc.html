@@ -1,0 +1,44 @@
+{% extends "_layout.html" %}
+{% block title %}NOC — {{ ctx.disno }}{% endblock %}
+{% block watermark %}<div class="watermark">N O C</div>{% endblock %}
+{% block content %}
+
+<h1>अनापत्ति प्रमाण-पत्र</h1>
+<h2>No Objection Certificate (NOC)</h2>
+
+<p class="right small">
+  NOC No.: <b>{{ ctx.noc_number or ctx.disno + "-NOC" }}</b> ·
+  Date: <b>{{ ctx.Date }}</b>
+</p>
+
+<p>
+  प्रमाणित किया जाता है कि श्री / श्रीमती <b>{{ ctx.NAME }}</b>
+  पुत्र / पति  {{ ctx.father_nane }}, निवासी ग्राम
+  <b>{{ ctx.VILLAGE }}</b>, पोस्ट {{ ctx.post }}, खाता संख्या
+  <b>{{ ctx.ACCOUNT_ID }}</b> के विरुद्ध केस संख्या
+  <b>{{ ctx.disno }}</b> (निरीक्षण दिनांक {{ ctx.dis_date }}) में
+  निर्धारित सम्पूर्ण राशि का भुगतान कर दिया गया है।
+</p>
+
+<table class="kv">
+  <tr><td class="label">Section</td><td>{{ ctx.SECTION }}</td></tr>
+  <tr><td class="label">Inspection Date</td><td>{{ ctx.dis_date }}</td></tr>
+  <tr><td class="label">Assessment</td>
+      <td class="num">₹ {{ ctx.ASSESMENT_TOTAL }}</td></tr>
+  <tr><td class="label">Compounding</td>
+      <td class="num">₹ {{ ctx.COMPOUNDING_AMOUNT }}</td></tr>
+  <tr><td class="label bold">Status</td>
+      <td class="bold" style="color:#16a34a">Fully Paid</td></tr>
+</table>
+
+<p>
+  अतः इस कार्यालय की ओर से उपरोक्त प्रकरण के संदर्भ में कोई आपत्ति
+  शेष नहीं है। यह NOC आगे की वैधानिक/पोर्टल कार्यवाही हेतु निर्गत्
+  किया जा रहा है।
+</p>
+
+<div class="sign-grid">
+  <div class="box">कार्यालय की मुहर / Office Stamp</div>
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+</div>
+{% endblock %}

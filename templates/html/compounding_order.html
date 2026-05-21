@@ -1,0 +1,40 @@
+{% extends "_layout.html" %}
+{% block title %}Compounding Order — {{ ctx.disno }}{% endblock %}
+{% block content %}
+
+<h1>धारा 152 — Compounding आदेश</h1>
+<h2>Section 152 — Compounding Order</h2>
+
+<p class="right small">
+  Order No.: {{ ctx.compounding_order_no or ctx.disno + "-CMP" }} ·
+  Date: <b>{{ ctx.Date }}</b>
+</p>
+
+<table class="kv">
+  <tr><td class="label">Consumer</td><td>{{ ctx.NAME }}</td></tr>
+  <tr><td class="label">Father</td><td>{{ ctx.father_nane }}</td></tr>
+  <tr><td class="label">Village</td><td>{{ ctx.VILLAGE }}</td></tr>
+  <tr><td class="label">Account</td><td>{{ ctx.ACCOUNT_ID }}</td></tr>
+  <tr><td class="label">Section</td><td>{{ ctx.SECTION }}</td></tr>
+  <tr><td class="label">Connected Load</td><td>{{ ctx.CONNECTED_LOAD }} kW</td></tr>
+  <tr><td class="label">Inspection Date</td><td>{{ ctx.dis_date }}</td></tr>
+  <tr><td class="label bold">Compounding Amount</td>
+      <td class="num bold">₹ {{ ctx.COMPOUNDING_AMOUNT }}</td></tr>
+</table>
+
+<h3>औचित्य / Justification</h3>
+<p style="background: #f4f6fa; padding: 4mm; border-left: 3pt solid #305496">
+  {{ ctx.COMPOUNDING_JUSTIFICATION or "—" }}
+</p>
+
+<p>
+  उपरोक्त आधार पर विद्युत अधिनियम की धारा 152 के अंतर्गत Compounding शुल्क
+  <b>₹ {{ ctx.COMPOUNDING_AMOUNT }}</b> निर्धारित किया जाता है।
+  इसके भुगतान पर ही आगे की कार्यवाही (कनेक्शन बहाली / केस बंद आदि) की जा सकेगी।
+</p>
+
+<div class="sign-grid">
+  <div class="box">कार्यालय की मुहर / Office Stamp</div>
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "_layout.html" %}
+{% block title %}Thanedari Copy — {{ ctx.disno }}{% endblock %}
+{% block content %}
+
+<h1>थानेदारी प्रति</h1>
+<h2>Police / SE / Advocate Copy</h2>
+
+<p class="right small">
+  Case No.: <b>{{ ctx.disno }}</b> · FIR: {{ ctx.FIR_NUMBER or "—" }} ·
+  Section: {{ ctx.SECTION }} · Date: {{ ctx.Date }}
+</p>
+
+<p>
+  सेवा में,<br/>
+  <b>प्रभारी निरीक्षक</b>,<br/>
+  थाना ____________________,<br/>
+  जनपद {{ ctx.district or "—" }}
+</p>
+
+<p>
+  <b>विषय:</b> विद्युत अधिनियम धारा {{ ctx.SECTION }} के अंतर्गत प्रकरण
+  संख्या <b>{{ ctx.disno }}</b> में सहयोग एवं FIR दर्ज करवाने हेतु।
+</p>
+
+<p>
+  महोदय,<br/>
+  निम्नांकित उपभोक्ता के परिसर पर निरीक्षण दिनांक {{ ctx.dis_date }} को
+  विद्युत चोरी / अनधिकृत उपयोग पाया गया है। उक्त के संदर्भ में आवश्यक
+  वैधानिक कार्यवाही हेतु यह प्रति अग्रसारित की जा रही है।
+</p>
+
+<h3>उपभोक्ता विवरण</h3>
+<table class="kv">
+  <tr><td class="label">उपभोक्ता / Consumer</td><td>{{ ctx.NAME }}</td></tr>
+  <tr><td class="label">पुत्र / Father</td><td>{{ ctx.father_nane }}</td></tr>
+  <tr><td class="label">ग्राम / Village</td><td>{{ ctx.VILLAGE }}</td></tr>
+  <tr><td class="label">पोस्ट / पिन</td><td>{{ ctx.post }} / {{ ctx.pin_code }}</td></tr>
+  <tr><td class="label">मोबाइल / Mobile</td><td>{{ ctx.MOBILE_NO }}</td></tr>
+  <tr><td class="label">खाता संख्या / Account</td><td>{{ ctx.ACCOUNT_ID }}</td></tr>
+  <tr><td class="label">निरीक्षण / Inspection</td><td>{{ ctx.dis_date }}</td></tr>
+  <tr><td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td></tr>
+  <tr><td class="label">Sub-Substation</td><td>{{ ctx.SUB_SUBSTATION or "—" }}</td></tr>
+  <tr><td class="label">मूल्यांकन / Assessment</td>
+      <td class="num bold">₹ {{ ctx.ASSESMENT_TOTAL }}</td></tr>
+  <tr><td class="label">Compounding (Sec 152)</td>
+      <td class="num">₹ {{ ctx.COMPOUNDING_AMOUNT }}</td></tr>
+</table>
+
+<p class="small" style="margin-top:6mm">
+  प्रति / Cc: अधीक्षण अभियन्ता · कॉर्पोरेट अधिवक्ता · केस फाइल
+</p>
+
+<div class="sign-grid">
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+  <div class="box">हस्ताक्षर / Signature</div>
+</div>
+{% endblock %}

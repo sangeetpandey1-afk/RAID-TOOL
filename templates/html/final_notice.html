@@ -1,0 +1,62 @@
+{% extends "_layout.html" %}
+{% block title %}Final Notice — {{ ctx.disno }}{% endblock %}
+{% block watermark %}<div class="watermark">FINAL NOTICE</div>{% endblock %}
+{% block content %}
+
+<h1>अंतिम सूचना</h1>
+<h2>Final Notice (Last Reminder before Section 3)</h2>
+
+<p class="small right">
+  Notice No.: {{ ctx.final_notice_no or ctx.disno + "-FN" }} ·
+  जारी दिनांक / Issued: {{ ctx.Date }}
+</p>
+
+<p>
+  सेवा में,<br/>
+  <b>{{ ctx.NAME }}</b><br/>
+  पुत्र / पति  {{ ctx.father_nane }}<br/>
+  ग्राम  {{ ctx.VILLAGE }}, पोस्ट  {{ ctx.post }}, पिन  {{ ctx.pin_code }}<br/>
+  मोबाइल: {{ ctx.MOBILE_NO }}<br/>
+  खाता संख्या: {{ ctx.ACCOUNT_ID }}
+</p>
+
+<p><b>विषय:</b> निरीक्षण दिनांक <b>{{ ctx.dis_date }}</b> (केस सं.
+   <b>{{ ctx.disno }}</b>) के संदर्भ में अंतिम भुगतान सूचना।</p>
+
+<p>
+  महोदय,<br/>
+  आपके द्वारा निरीक्षण दिनांक {{ ctx.dis_date }} को हुई कार्यवाही के आधार
+  पर निर्गत् अनन्तिम मूल्यांकन सूचना के विरुद्ध अब तक न तो निर्धारित राशि
+  <b>₹ {{ ctx.ASSESMENT_TOTAL }}</b> का भुगतान किया गया है, और न ही कोई
+  आपत्ति प्रस्तुत की गई है।
+</p>
+
+<p>
+  यह आपको <span class="red">अंतिम सूचना</span> के माध्यम से सूचित किया
+  जाता है कि इस सूचना की प्राप्ति के <b>7 दिवस</b> के भीतर सम्पूर्ण देय
+  राशि का भुगतान कर रसीद की प्रति इस कार्यालय में जमा करावें। निर्धारित
+  अवधि में भुगतान न किए जाने की स्थिति में आपके विरुद्ध विद्युत अधिनियम
+  की धारा 3 के अंतर्गत मांग सूचना निर्गत् की जाएगी एवं तत्पश्चात धारा 5
+  के अंतर्गत राजस्व वसूली की कार्यवाही प्रारम्भ की जाएगी, जिसका सम्पूर्ण
+  उत्तरदायित्व आपका होगा।
+</p>
+
+<table class="kv">
+  <tr><td class="label">कुल देय राशि / Outstanding</td>
+      <td class="num bold">₹ {{ ctx.ASSESMENT_TOTAL }}</td></tr>
+  {% if ctx.COMPOUNDING_AMOUNT and ctx.COMPOUNDING_AMOUNT not in ("0.00","0","") %}
+  <tr><td class="label">Compounding (Sec 152)</td>
+      <td class="num">₹ {{ ctx.COMPOUNDING_AMOUNT }}</td></tr>
+  {% endif %}
+  <tr><td class="label">भुगतान की समय सीमा / Pay by</td>
+      <td class="bold red">सूचना प्राप्ति से 7 दिन के भीतर</td></tr>
+</table>
+
+<p>कृपया इस सूचना को गंभीरता से लेते हुए तत्काल भुगतान सुनिश्चित करें ताकि
+   आगे की वैधानिक कार्यवाही से बचा जा सके।</p>
+
+<div class="sign-grid">
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+  <div class="box">कार्यालय की मुहर / Office Stamp</div>
+</div>
+{% endblock %}

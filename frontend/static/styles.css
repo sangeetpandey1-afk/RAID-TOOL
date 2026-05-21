@@ -100,6 +100,7 @@ h3 { font-size: 14px; font-weight: 600; margin: 18px 0 8px; color: var(--text); 
   background: var(--surface); border: 1px solid var(--border);
   color: var(--text); padding: 8px 14px; border-radius: 4px;
   font-size: 13px; cursor: pointer; font-family: inherit;
+  text-decoration: none; display: inline-block;
   transition: background 0.1s, border-color 0.1s;
 }
 .btn:hover { background: #f0f3f8; border-color: #b9c2d3; }
@@ -109,6 +110,10 @@ h3 { font-size: 14px; font-weight: 600; margin: 18px 0 8px; color: var(--text); 
 }
 .btn.primary:hover { background: var(--primary-d); border-color: var(--primary-d); }
 .btn.small { padding: 4px 8px; font-size: 12px; }
+.vbar {
+  display: inline-block; width: 1px; height: 18px;
+  background: var(--border); margin: 0 6px;
+}
 
 /* --------------------------------------------------- forms */
 .form-grid { display: grid; gap: 14px; margin-bottom: 12px; }
@@ -149,8 +154,58 @@ input:focus, select:focus, textarea:focus {
 .data-table tbody tr:nth-child(even) { background: var(--row-alt); }
 .data-table tbody tr:hover { background: #eef2f8; cursor: default; }
 .data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tr.grand th, .data-table tr.grand td {
+  background: #fef9c3 !important; font-weight: 700;
+}
 
 .scroll-x { overflow-x: auto; max-width: 100%; }
+
+/* Raid Master row colors */
+.data-table tr.row-green  td { background: #ecfdf5 !important; }
+.data-table tr.row-yellow td { background: #fefce8 !important; }
+.data-table tr.row-red    td { background: #fef2f2 !important; }
+.data-table tr.row-blue   td { background: #eff6ff !important; }
+.data-table tr.row-red:hover td    { background: #fee2e2 !important; }
+.data-table tr.row-yellow:hover td { background: #fef3c7 !important; }
+.data-table tr.row-green:hover td  { background: #d1fae5 !important; }
+.data-table tr.row-blue:hover td   { background: #dbeafe !important; }
+.data-table .actions-col { white-space: nowrap; }
+.data-table .actions-col .btn { margin-right: 4px; }
+
+.cases-toolbar {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+  margin-bottom: 8px;
+}
+.cases-count { color: var(--muted); font-size: 12px; }
+.cases-legend {
+  display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px;
+  color: var(--muted); margin-bottom: 10px;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.swatch.green  { background: #d1fae5; border: 1px solid #16a34a; }
+.swatch.yellow { background: #fef9c3; border: 1px solid #ca8a04; }
+.swatch.red    { background: #fee2e2; border: 1px solid #b91c1c; }
+.swatch.blue   { background: #dbeafe; border: 1px solid #2563eb; }
+
+/* Progress bar */
+.progress {
+  position: relative; height: 14px;
+  background: #e5e7eb; border-radius: 999px;
+  overflow: hidden; min-width: 80px;
+}
+.progress-fill {
+  height: 100%; background: #9ca3af; border-radius: 999px;
+  transition: width 0.2s;
+}
+.progress-fill.green { background: #16a34a; }
+.progress-fill.blue  { background: #2563eb; }
+.progress-fill.red   { background: #dc2626; }
+.progress span {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600; color: #1f2937;
+}
 
 /* --------------------------------------------------- card */
 .card {
@@ -159,6 +214,19 @@ input:focus, select:focus, textarea:focus {
   white-space: pre-wrap; word-break: break-word;
 }
 .card pre { margin: 0; font-family: ui-monospace, "Cascadia Code", "Consolas", monospace; font-size: 12px; }
+
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 6px 18px;
+}
+
+/* Doc toolbar (case detail) */
+.doc-toolbar-row {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  background: #f9fafb; border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px;
+}
+.doc-toolbar-row .btn { white-space: nowrap; text-transform: capitalize; }
 
 /* --------------------------------------------------- status pills */
 .pill {
@@ -170,6 +238,10 @@ input:focus, select:focus, textarea:focus {
 .pill.yellow { background: #fef9c3; color: #854d0e; }
 .pill.red    { background: #fee2e2; color: #991b1b; }
 .pill.blue   { background: #dbeafe; color: #1e40af; }
+
+/* small text */
+.small { color: var(--muted); font-size: 11px; }
+.center { text-align: center; }
 
 /* --------------------------------------------------- toast */
 .toast {

@@ -1,0 +1,85 @@
+{% extends "_layout.html" %}
+{% block title %}Provisional Notice — Consumer Copy — {{ ctx.disno }}{% endblock %}
+{% block content %}
+
+<h1>अनन्तिम मूल्यांकन सूचना</h1>
+<h2>Provisional Assessment Notice (Consumer Copy)</h2>
+
+<h3>उपभोक्ता विवरण / Consumer Details</h3>
+<table class="kv">
+  <tr><td class="label">Account No.</td><td>{{ ctx.ACCOUNT_ID }}</td>
+      <td class="label">Online No.</td><td>{{ ctx.ONLINE_NO or "—" }}</td></tr>
+  <tr><td class="label">नाम / Name</td><td>{{ ctx.NAME }}</td>
+      <td class="label">पिता / Father</td><td>{{ ctx.father_nane }}</td></tr>
+  <tr><td class="label">गाँव / Village</td><td>{{ ctx.VILLAGE }}</td>
+      <td class="label">पोस्ट / पिन</td><td>{{ ctx.post }} / {{ ctx.pin_code }}</td></tr>
+  <tr><td class="label">मोबाइल / Mobile</td><td>{{ ctx.MOBILE_NO }}</td>
+      <td class="label">श्रेणी / Category</td><td>{{ ctx.CATEGORY }}</td></tr>
+  <tr><td class="label">Section</td><td>{{ ctx.SECTION }}</td>
+      <td class="label">निरीक्षण / Inspection</td><td>{{ ctx.dis_date }}</td></tr>
+  <tr><td class="label">Connected Load</td><td>{{ ctx.CONNECTED_LOAD }} kW</td>
+      <td class="label">Sub-Substation</td><td>{{ ctx.SUB_SUBSTATION or "—" }}</td></tr>
+  <tr><td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td>
+      <td class="label">Checking Type</td><td>{{ ctx.CHECKING_TYPE }}</td></tr>
+</table>
+
+<h3>उपकरण विवरण / Devices Inspected</h3>
+<table class="data">
+  <thead>
+    <tr>
+      <th>क्र./S.No</th><th>उपकरण / Device</th>
+      <th class="num">Load (W)</th><th class="num">Factor</th>
+      <th class="num">Hours/day</th><th class="num">Days</th>
+      <th class="num">Units (kWh)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in ctx.devices %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ d.name }}</td>
+      <td class="num">{{ d.L or d.load }}</td>
+      <td class="num">{{ d.F or d.factor or 1 }}</td>
+      <td class="num">{{ d.H or d.hours }}</td>
+      <td class="num">{{ d.D or d.days }}</td>
+      <td class="num">{{ "%.2f" % (d.units or 0) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="center small">No devices recorded</td></tr>
+    {% endfor %}
+    <tr class="totals-row">
+      <td colspan="6" class="num">Total Calculated Units</td>
+      <td class="num">{{ ctx.TOTAL_CALCULATED_UNITS }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>मूल्यांकन गणना / Assessment Breakdown</h3>
+<table class="kv">
+  <tr><td class="label">Total Units (after less-unit)</td><td class="num">{{ ctx.TOTAL_UNITS }}</td></tr>
+  <tr><td class="label">Months</td><td class="num">{{ ctx.MONTHS }}</td></tr>
+  <tr><td class="label">Fixed Rate (₹/kW/mo)</td><td class="num">₹ {{ ctx.FIXED_RATE }}</td></tr>
+  <tr><td class="label">Final Fixed Charges</td><td class="num">₹ {{ ctx.FINAL_FIXED_CHARGES }}</td></tr>
+  <tr><td class="label">Final Energy Charges (slab × multiplier)</td><td class="num">₹ {{ ctx.FINAL_ENERGY_CHARGES }}</td></tr>
+  <tr><td class="label">Electricity Duty ({{ ctx.ED_RATE_PERCENT }}%)</td><td class="num">₹ {{ ctx.FINAL_ED_CHARGES }}</td></tr>
+  <tr><td class="label bold">कुल मूल्यांकन / Grand Total</td>
+      <td class="num bold">₹ {{ ctx.ASSESMENT_TOTAL }}</td></tr>
+  {% if ctx.COMPOUNDING_AMOUNT and ctx.COMPOUNDING_AMOUNT not in ("0.00","0", "") %}
+  <tr><td class="label">Compounding (Sec 152)</td><td class="num">₹ {{ ctx.COMPOUNDING_AMOUNT }}</td></tr>
+  {% endif %}
+</table>
+
+<div class="total-banner">देय राशि / Payable: ₹ {{ ctx.ASSESMENT_TOTAL }}</div>
+
+<p style="margin-top:8mm">
+  <span class="red">महत्वपूर्ण / Important:</span>
+  भुगतान की समय सीमा निरीक्षण दिनांक से <b>7 दिन</b> है। आपत्ति प्रस्तुत
+  करने की समय सीमा <b>15 दिन</b> है। निर्धारित अवधि में भुगतान न किए जाने
+  पर धारा 3 / 5 के अंतर्गत आगे की कार्यवाही प्रारम्भ की जाएगी।
+</p>
+
+<div class="sign-grid">
+  <div class="box">उपभोक्ता हस्ताक्षर / Consumer Signature</div>
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+</div>
+{% endblock %}

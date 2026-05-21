@@ -1,0 +1,62 @@
+{% extends "_layout.html" %}
+{% block title %}Provisional — Office Copy — {{ ctx.disno }}{% endblock %}
+{% block watermark %}<div class="watermark">OFFICE COPY</div>{% endblock %}
+{% block content %}
+
+<h1>अनन्तिम मूल्यांकन — कार्यालय प्रति</h1>
+<h2>Provisional Assessment — Office Copy (LFHD focus)</h2>
+
+<h3>केस एवं अधिकारी विवरण</h3>
+<table class="kv">
+  <tr><td class="label">Case ID</td><td>{{ ctx.disno }}</td>
+      <td class="label">Online No.</td><td>{{ ctx.ONLINE_NO or "—" }}</td></tr>
+  <tr><td class="label">Account</td><td>{{ ctx.ACCOUNT_ID }}</td>
+      <td class="label">Section</td><td>{{ ctx.SECTION }}</td></tr>
+  <tr><td class="label">Inspection Date</td><td>{{ ctx.dis_date }}</td>
+      <td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td></tr>
+  <tr><td class="label">Sub-Substation</td><td>{{ ctx.SUB_SUBSTATION or "—" }}</td>
+      <td class="label">Checking Type</td><td>{{ ctx.CHECKING_TYPE }}</td></tr>
+</table>
+
+<h3>LFHD Calculation (device names suppressed)</h3>
+<table class="data">
+  <thead>
+    <tr><th>Item</th><th class="num">L (W)</th><th class="num">F</th>
+        <th class="num">H</th><th class="num">D</th><th class="num">Units</th></tr>
+  </thead>
+  <tbody>
+    {% for d in ctx.devices %}
+    <tr>
+      <td>Item {{ loop.index }}</td>
+      <td class="num">{{ d.L or d.load }}</td>
+      <td class="num">{{ d.F or d.factor or 1 }}</td>
+      <td class="num">{{ d.H or d.hours }}</td>
+      <td class="num">{{ d.D or d.days }}</td>
+      <td class="num">{{ "%.2f" % (d.units or 0) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="totals-row">
+      <td colspan="5" class="num">Total Calculated Units</td>
+      <td class="num">{{ ctx.TOTAL_CALCULATED_UNITS }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>कार्यालय सारांश / Office Summary</h3>
+<table class="kv">
+  <tr><td class="label">Summary — Fixed</td><td class="num">₹ {{ ctx.SUMMARY_FIXED }}</td></tr>
+  <tr><td class="label">Summary — Energy</td><td class="num">₹ {{ ctx.SUMMARY_ENERGY }}</td></tr>
+  <tr><td class="label">Summary — ED</td><td class="num">₹ {{ ctx.SUMMARY_ED }}</td></tr>
+  <tr><td class="label bold">Summary — TOTAL</td>
+      <td class="num bold">₹ {{ ctx.SUMMARY_TOTAL }}</td></tr>
+</table>
+
+<p class="small" style="margin-top:8mm">
+  प्रति / Cc: मुख्य अभियन्ता · अधिशासी अभियन्ता · उपखण्ड अभियन्ता · राजस्व निर्धारण पटल
+</p>
+
+<div class="sign-grid">
+  <div class="box">J.E. {{ ctx.JE_NAME }}</div>
+  <div class="box">अधिशासी अभियन्ता / Executive Engineer<br/>खण्ड {{ ctx.Div_no }}</div>
+</div>
+{% endblock %}

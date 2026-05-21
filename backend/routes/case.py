@@ -33,6 +33,128 @@ def _hydrate(case: dict) -> dict:
     return case
 
 
+# ===================================================================
+# Raid Master enrichment — payment / notice / repeat-theft summaries
+# ===================================================================
+def _enrich_for_master(case: dict) -> dict:
+    """
+    Annotate a case row with summarised payment / notice / repeat-theft
+    information so the browser's Cases tab can render colour-coded rows
+    without making N additional round-trips per case.
+    """
+    cid = case["case_id"]
+    total = safe_float(case.get("total_assessment"))
+
+    # ---- Payments
+    paid_row = fetch_one(
+        "SELECT COALESCE(SUM(amount),0) AS paid, COUNT(*) AS cnt "
+        "FROM payments WHERE case_id=?",
+        (cid,),
+    )
+    paid = safe_float(paid_row["paid"]) if paid_row else 0.0
+    pay_count = int(paid_row["cnt"] or 0) if paid_row else 0
+    if total <= 0:
+        pay_status = "no_due"
+        pay_pct = 0.0
+    elif paid >= total - 0.01:
+        pay_status = "paid"
+        pay_pct = 100.0
+    elif paid > 0:
+        pay_status = "partial"
+        pay_pct = round(paid * 100.0 / total, 1)
+    else:
+        pay_status = "unpaid"
+        pay_pct = 0.0
+
+    # ---- Notices
+    last_notice = fetch_one(
+        """SELECT notice_type, status, due_date, dispatch_date AS notice_date
+             FROM notices WHERE case_id=?
+            ORDER BY COALESCE(dispatch_date, created_at) DESC, id DESC
+            LIMIT 1""",
+        (cid,),
+    )
+    notice_count = (fetch_one(
+        "SELECT COUNT(*) AS c FROM notices WHERE case_id=?", (cid,)
+    ) or {}).get("c", 0)
+
+    # ---- Timeline overdue flags from inspection_date
+    insp = case.get("inspection_date")
+    overdue_section3 = False
+    overdue_section5 = False
+    if insp:
+        try:
+            d = datetime.strptime(insp, "%Y-%m-%d").date()
+            elapsed = (date.today() - d).days
+            overdue_section3 = (elapsed > config.TIMELINE_SECTION_3_DISPATCH
+                                and pay_status != "paid")
+            overdue_section5 = (elapsed > config.TIMELINE_SECTION_5_DISPATCH
+                                and pay_status != "paid")
+        except (TypeError, ValueError):
+            pass
+
+    # ---- Repeat-offender flag (count prior cases for same consumer)
+    if case.get("consumer_id"):
+        prior = fetch_one(
+            "SELECT COUNT(*) AS c FROM raid_cases "
+            "WHERE consumer_id=? AND case_id<>?",
+            (case["consumer_id"], cid),
+        ) or {"c": 0}
+        total_offenses = int(prior["c"] or 0) + 1
+    else:
+        total_offenses = 1
+    is_repeat = total_offenses >= 2
+
+    # ---- Composite row colour for the master grid
+    if pay_status == "paid":
+        row_color = "green"
+    elif overdue_section5:
+        row_color = "red"
+    elif overdue_section3 or pay_status == "unpaid":
+        row_color = "yellow"
+    elif pay_status == "partial":
+        row_color = "blue"
+    else:
+        row_color = ""
+
+    # ---- Consumer metadata that the grid needs (avoids extra fetches)
+    consumer = (fetch_one(
+        "SELECT name, father_name, village, mobile, category, div_code "
+        "FROM consumers WHERE id=?", (case.get("consumer_id"),))
+        if case.get("consumer_id") else None) or {}
+
+    case["consumer_name"] = consumer.get("name") or case.get("user_name") or ""
+    case["consumer_father"] = consumer.get("father_name") or case.get("user_father") or ""
+    case["consumer_village"] = consumer.get("village") or ""
+    case["consumer_mobile"]  = consumer.get("mobile") or ""
+    case["consumer_div"]     = consumer.get("div_code") or ""
+
+    case["payment_summary"] = {
+        "total_assessment": total,
+        "total_paid":       paid,
+        "balance":          max(total - paid, 0.0),
+        "payment_count":    pay_count,
+        "status":           pay_status,
+        "percent":          pay_pct,
+    }
+    case["notice_summary"] = {
+        "count":         int(notice_count or 0),
+        "latest_type":   (last_notice or {}).get("notice_type"),
+        "latest_status": (last_notice or {}).get("status"),
+        "latest_due":    (last_notice or {}).get("due_date"),
+        "overdue_section3": overdue_section3,
+        "overdue_section5": overdue_section5,
+    }
+    case["offense_info"] = {
+        "total_offenses": total_offenses,
+        "is_repeat":      is_repeat,
+        "alert":          ("REPEAT THEFT — " + str(total_offenses) + "x")
+                          if is_repeat else None,
+    }
+    case["row_color"] = row_color
+    return case
+
+
 def _resolve_consumer(account: str | None, name: str | None,
                       father: str | None, village: str | None) -> dict | None:
     if account:
@@ -376,7 +498,7 @@ def search_cases():
             LIMIT ? OFFSET ?""",
         params + [page_size, offset],
     )
-    return envelope_ok([_hydrate(r) for r in rows], meta={
+    return envelope_ok([_enrich_for_master(_hydrate(r)) for r in rows], meta={
         "total": total, "page": page, "page_size": page_size,
         "pages": (total + page_size - 1) // page_size,
     })

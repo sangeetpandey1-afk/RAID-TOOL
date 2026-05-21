@@ -21,7 +21,7 @@
   <nav class="tabs" id="tabs">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
     <button class="tab" data-tab="new-case">New Case</button>
-    <button class="tab" data-tab="cases">Cases</button>
+    <button class="tab" data-tab="cases">Raid Master</button>
     <button class="tab" data-tab="search">Search</button>
     <button class="tab" data-tab="backup">Backup</button>
     <button class="tab" data-tab="reports">Reports</button>
@@ -48,6 +48,9 @@
         <button class="btn" data-action="import-master">Import Master Data</button>
         <button class="btn" data-action="backup-now">Backup Now</button>
       </div>
+
+      <h3>Last Backup</h3>
+      <div class="card" id="lastBackup">Loading…</div>
 
       <h3>Timeline Alerts</h3>
       <div class="card" id="alertsBox">Loading…</div>
@@ -119,7 +122,7 @@
         <button class="btn primary" data-action="live-calc">Live Calculate</button>
         <button class="btn primary" data-action="save-case">Save Case</button>
         <button class="btn" data-action="offense-check">Offense Check</button>
-        <button class="btn" data-action="generate-all-docs">Generate All Documents</button>
+        <button class="btn primary" data-action="generate-all-docs">📄 Generate All Notices</button>
       </div>
 
       <h3>Calculation Result</h3>
@@ -129,19 +132,29 @@
       <div class="card" id="savedCase">No case saved yet.</div>
     </section>
 
-    <!-- ============================ CASES ============================ -->
+    <!-- ============================ RAID MASTER ============================ -->
     <section class="panel" id="panel-cases">
-      <h2>Cases</h2>
-      <div class="actions-row">
+      <h2>Raid Master — Case List</h2>
+      <div class="cases-toolbar">
         <button class="btn primary" data-action="refresh-cases">Refresh</button>
-        <input id="cases_filter" placeholder="Filter (status / account / name)…" />
+        <input id="cases_filter" placeholder="Filter (status / account / name / village / J.E.)" style="flex:1" />
+        <span class="cases-count" id="casesCount">—</span>
       </div>
+      <div class="cases-legend" id="casesLegend"></div>
+
       <div class="scroll-x">
         <table class="data-table" id="casesTable">
           <thead>
-            <tr><th>Case ID</th><th>Account</th><th>Name</th><th>Section</th>
-                <th>Inspection</th><th>Assessment ₹</th><th>Compounding ₹</th>
-                <th>Status</th><th>Actions</th></tr>
+            <tr>
+              <th>Case ID / Account</th>
+              <th>Consumer / Village</th>
+              <th>Section / Inspection</th>
+              <th class="num">Assessment ₹</th>
+              <th>Payment Status</th>
+              <th>Notice Status</th>
+              <th>Case Status</th>
+              <th>Actions</th>
+            </tr>
           </thead>
           <tbody id="casesBody"></tbody>
         </table>
@@ -149,6 +162,19 @@
 
       <h3 id="casesDetailHeader" style="display:none">Case Details</h3>
       <div class="card" id="casesDetail" style="display:none"></div>
+
+      <h3 id="docToolbarHeader" style="display:none">📄 Documents — Generate &amp; Print</h3>
+      <div class="doc-toolbar-row" id="docToolbarWrap" style="display:none">
+        <div id="docToolbar"></div>
+      </div>
+
+      <h3 id="caseDocsHeader" style="display:none">Generated Documents</h3>
+      <div id="caseDocsWrap" style="display:none">
+        <div class="scroll-x"><table class="data-table" id="caseDocsTable">
+          <thead><tr><th>Type</th><th>File</th><th>Size</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="caseDocsBody"></tbody>
+        </table></div>
+      </div>
 
       <h3 id="casesPaymentsHeader" style="display:none">Payments</h3>
       <div id="casesPaymentsWrap" style="display:none">
@@ -162,16 +188,17 @@
         </table></div>
       </div>
 
-      <h3 id="casesNoticesHeader" style="display:none">Notices</h3>
+      <h3 id="casesNoticesHeader" style="display:none">Notices Timeline</h3>
       <div id="casesNoticesWrap" style="display:none">
         <div class="actions-row">
           <button class="btn" data-action="add-notice" data-kind="provisional">+ Provisional</button>
+          <button class="btn" data-action="add-notice" data-kind="final_notice">+ Final</button>
           <button class="btn" data-action="add-notice" data-kind="section3">+ Section 3</button>
           <button class="btn" data-action="add-notice" data-kind="section5">+ Section 5</button>
         </div>
         <div class="scroll-x"><table class="data-table" id="noticesTable">
           <thead><tr><th>Type</th><th>Number</th><th>Date</th><th>Due</th>
-                     <th>Status</th><th>Dispatch</th></tr></thead>
+                     <th>Status</th></tr></thead>
           <tbody id="noticesBody"></tbody>
         </table></div>
       </div>
@@ -199,9 +226,13 @@
 
     <!-- ============================ BACKUP ============================ -->
     <section class="panel" id="panel-backup">
-      <h2>Backup</h2>
+      <h2>Local Backup</h2>
+      <p class="small">Each backup zips the SQLite DB (online-backup safe), the
+        master_data folder and every generated document under docs/. Files
+        live in <code>backup/</code> on the server. Optional Google Drive
+        upload activates when env vars are set.</p>
       <div class="actions-row">
-        <button class="btn primary" data-action="backup-now">Backup Now</button>
+        <button class="btn primary" data-action="backup-now">📦 Backup Now</button>
         <button class="btn" data-action="refresh-backups">Refresh List</button>
         <button class="btn" data-action="backup-status">Status</button>
       </div>
@@ -218,7 +249,7 @@
 
     <!-- ============================ REPORTS ============================ -->
     <section class="panel" id="panel-reports">
-      <h2>Reports & Exports</h2>
+      <h2>Reports &amp; Exports</h2>
       <div class="actions-row">
         <button class="btn primary" data-action="report" data-kind="cases">Cases (xlsx)</button>
         <button class="btn primary" data-action="report" data-kind="payments">Payments (xlsx)</button>

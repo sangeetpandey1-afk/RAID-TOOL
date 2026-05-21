@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <title>Envelope — {{ ctx.disno }}</title>
+  <style>
+    @page { size: 220mm 110mm; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Mangal", "Nirmala UI", "Noto Sans Devanagari", system-ui, sans-serif;
+      margin: 0; padding: 0; background: #ececec;
+    }
+    .doc-toolbar {
+      position: sticky; top: 0;
+      background: #1f2937; color: #fff;
+      padding: 8px 14px;
+      display: flex; gap: 12px; align-items: center;
+      font-family: system-ui, sans-serif; font-size: 13px;
+    }
+    .doc-toolbar button {
+      background: #305496; color: #fff; border: 0;
+      padding: 6px 14px; border-radius: 4px; cursor: pointer;
+    }
+    .envelope {
+      background: #fff;
+      width: 220mm; height: 110mm;
+      margin: 12mm auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      padding: 14mm 16mm; position: relative;
+      display: flex; flex-direction: column; justify-content: space-between;
+      font-size: 14pt;
+    }
+    .from { font-size: 10pt; color: #444; line-height: 1.4; }
+    .to {
+      align-self: flex-end; text-align: left;
+      font-size: 16pt; line-height: 1.5;
+    }
+    .to .label { font-size: 13pt; font-weight: bold; margin-bottom: 4mm; }
+    .stamp-box {
+      position: absolute; top: 14mm; right: 16mm;
+      border: 0.5pt solid #888; width: 30mm; height: 30mm;
+      font-size: 9pt; color: #888; text-align: center;
+      padding-top: 12mm;
+    }
+    @media print {
+      body { background: #fff; }
+      .doc-toolbar { display: none !important; }
+      .envelope { margin: 0; box-shadow: none; width: auto; height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-toolbar">
+    <button onclick="window.print()">🖨 Print Envelope</button>
+    <a href="javascript:window.close();" style="color:#93c5fd">Close</a>
+    <span style="margin-left:auto; opacity: 0.85">DL envelope · 220 × 110 mm</span>
+  </div>
+
+  <div class="envelope">
+    <div class="from">
+      From:<br/>
+      <b>Executive Engineer</b><br/>
+      Division {{ ctx.Div_no or "—" }}<br/>
+      U.P. Power Corporation Ltd.
+    </div>
+
+    <div class="stamp-box">STAMP</div>
+
+    <div class="to">
+      <div class="label">To,</div>
+      {{ ctx.NAME }}<br/>
+      S/o {{ ctx.father_nane }}<br/>
+      Village {{ ctx.VILLAGE }}<br/>
+      Post {{ ctx.post }} – {{ ctx.pin_code }}<br/>
+      Mob: {{ ctx.MOBILE_NO }}
+    </div>
+  </div>
+</body>
+</html>

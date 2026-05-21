@@ -415,6 +415,49 @@ def tpl_noc():
     return _save(doc, "noc.docx")
 
 
+def tpl_final_notice():
+    doc = Document()
+    _heading(doc, "अंतिम सूचना", 0)
+    _heading(doc, "Final Notice (Last reminder before Section 3)", 1)
+    _para(doc,
+          "Notice No.: {{ final_notice_no }}    Date: {{ Date }}",
+          align=WD_ALIGN_PARAGRAPH.RIGHT)
+
+    _para(doc,
+          "\nसेवा में,\n{{ NAME }}\nपुत्र / पति  {{ father_nane }}\n"
+          "ग्राम  {{ VILLAGE }}, पोस्ट  {{ post }}, पिन  {{ pin_code }}\n"
+          "मोबाइल: {{ MOBILE_NO }}\nखाता: {{ ACCOUNT_ID }}")
+
+    _para(doc,
+          "\nविषय: निरीक्षण दिनांक {{ dis_date }} (केस सं. {{ disno }}) "
+          "के संदर्भ में अंतिम भुगतान सूचना।")
+
+    _para(doc,
+          "\nमहोदय,\nआपके द्वारा निरीक्षण दिनांक {{ dis_date }} को हुई "
+          "कार्यवाही के आधार पर निर्गत् अनन्तिम मूल्यांकन सूचना के विरुद्ध "
+          "अब तक न तो निर्धारित राशि ₹ {{ ASSESMENT_TOTAL }} का भुगतान "
+          "किया गया है, और न ही कोई आपत्ति प्रस्तुत की गई है।")
+
+    _para(doc,
+          "यह आपको अंतिम सूचना के माध्यम से सूचित किया जाता है कि इस "
+          "सूचना की प्राप्ति के 7 दिवस के भीतर सम्पूर्ण देय राशि का "
+          "भुगतान कर रसीद की प्रति इस कार्यालय में जमा करावें। "
+          "निर्धारित अवधि में भुगतान न किए जाने की स्थिति में आपके "
+          "विरुद्ध धारा 3 / 5 के अंतर्गत आगे की कार्यवाही प्रारम्भ की "
+          "जाएगी जिसका सम्पूर्ण उत्तरदायित्व आपका होगा।",
+          bold=True, color=(192, 0, 0))
+
+    _kv(doc, [
+        ("Outstanding",   "₹ {{ ASSESMENT_TOTAL }}"),
+        ("Compounding",   "₹ {{ COMPOUNDING_AMOUNT }}"),
+        ("Pay by",        "7 days from receipt"),
+    ])
+
+    _para(doc, "\n\nभवदीय,\nअधिशासी अभियन्ता\nखण्ड {{ Div_no }}",
+          align=WD_ALIGN_PARAGRAPH.RIGHT)
+    return _save(doc, "final_notice.docx")
+
+
 # ============================================================ main
 def main() -> None:
     print(f"Writing default templates to: {TEMPLATES}")
@@ -427,6 +470,7 @@ def main() -> None:
     tpl_deposit_slip()
     tpl_compounding_order()
     tpl_noc()
+    tpl_final_notice()
     print(f"\nDone. {len(list(TEMPLATES.glob('*.docx')))} templates ready.")
 
 
