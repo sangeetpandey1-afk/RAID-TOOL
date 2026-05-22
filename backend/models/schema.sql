@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS raid_cases (
     total_assessment   REAL,
     compounding_amount REAL,
     fir_number         TEXT,
+    checking_report_number TEXT,             -- Inspection / "Checking Report" reference
     case_status        TEXT DEFAULT 'open',  -- open|noticed|paid|closed|appealed
     created_by         TEXT,
     created_at         TEXT DEFAULT (datetime('now')),
@@ -182,6 +183,7 @@ CREATE INDEX IF NOT EXISTS idx_case_online    ON raid_cases(online_no);
 CREATE INDEX IF NOT EXISTS idx_case_inspect   ON raid_cases(inspection_date);
 CREATE INDEX IF NOT EXISTS idx_case_status    ON raid_cases(case_status);
 CREATE INDEX IF NOT EXISTS idx_case_section   ON raid_cases(section);
+CREATE INDEX IF NOT EXISTS idx_case_check_report ON raid_cases(checking_report_number);
 
 -- ---------- 9. PAYMENTS ------------------------------------------------
 CREATE TABLE IF NOT EXISTS payments (

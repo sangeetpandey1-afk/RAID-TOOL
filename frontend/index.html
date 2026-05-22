@@ -8,6 +8,9 @@
   <!-- Additive mobile-responsive overrides; loaded after styles.css so phone/tablet
        rules take precedence at <=1024px without altering the desktop UI. -->
   <link rel="stylesheet" href="/frontend/static/mobile.css" />
+  <!-- Compact / dense desktop layer; loaded last so its rules win on
+       desktop (>=1025px) while mobile.css continues to win on phones. -->
+  <link rel="stylesheet" href="/frontend/static/compact.css" />
 </head>
 <body>
   <header class="topbar">
@@ -67,11 +70,10 @@
       <h2>New Case</h2>
 
       <h3>उपभोक्ता विवरण / Consumer (Registered)</h3>
-      <div class="form-grid two-col">
+      <div class="form-grid two-col dense">
         <div>
           <label>Account No. <input id="f_account" type="text" /></label>
           <label>Online No. <input id="f_online_no" type="text" /></label>
-          <label>SC Number <input id="f_sc_number" type="text" /></label>
           <label>Name (नाम) <input id="f_name" type="text" lang="hi" /></label>
           <label>Father / पिता <input id="f_father" type="text" lang="hi" /></label>
           <label>Mobile <input id="f_mobile" type="text" /></label>
@@ -108,7 +110,7 @@
       </div>
 
       <h3>निरीक्षण विवरण / Raid Header</h3>
-      <div class="form-grid two-col">
+      <div class="form-grid two-col dense">
         <div>
           <label>Section
             <select id="f_section">
@@ -120,6 +122,10 @@
           </label>
           <label>Section (Other text) <input id="f_section_other" type="text" /></label>
           <label>Inspection Date <input id="f_inspection" type="date" /></label>
+          <label>Checking Report No.
+            <input id="f_checking_report_number" type="text"
+                   placeholder="e.g. CR-2026-001" />
+          </label>
 
           <label class="check-row">
             <input type="checkbox" id="chk_td_date" data-gate="f_td_date" />
@@ -170,7 +176,7 @@
         उसका नाम अलग से भरें — नोटिसों में «USER_NAME» / «USERS_FATHER» के रूप में आएगा।
         Leave blank if same as registered consumer.
       </p>
-      <div class="form-grid two-col">
+      <div class="form-grid two-col dense">
         <div>
           <label>User Name (परिसर पर मिला नाम) <input id="f_user_name" type="text" lang="hi" /></label>
           <label>User Father (पुत्र / पति) <input id="f_user_father" type="text" lang="hi" /></label>

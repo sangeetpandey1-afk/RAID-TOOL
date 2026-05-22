@@ -16,6 +16,8 @@
       <td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td></tr>
   <tr><td class="label">Sub-Substation</td><td>{{ ctx.SUB_SUBSTATION or "—" }}</td>
       <td class="label">Checking Type</td><td>{{ ctx.CHECKING_TYPE }}</td></tr>
+  <tr><td class="label">Checking Report No.</td>
+      <td colspan="3">{{ ctx.CHECKING_REPORT_NUMBER or "—" }}</td></tr>
 </table>
 
 <h3>LFHD Calculation (device names suppressed)</h3>

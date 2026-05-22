@@ -151,7 +151,15 @@ def build_context(case: dict, consumer: dict | None,
         "letter_number":   extra.get("letter_number", ""),
         "current_date":    today_iso,
         "outstanding_amount": _money(case.get("total_assessment")),
-        "checking_report_number": extra.get("checking_report_number", ""),
+        # Checking Report Number — sourced from the case row first, then any
+        # caller-supplied override. Both UPPERCASE and lowercase keys are
+        # exposed for backward compatibility with existing templates.
+        "CHECKING_REPORT_NUMBER": (case.get("checking_report_number")
+                                   or extra.get("checking_report_number", "")
+                                   or ""),
+        "checking_report_number": (case.get("checking_report_number")
+                                   or extra.get("checking_report_number", "")
+                                   or ""),
         "checking_date":   case.get("inspection_date") or "",
         "demand_notice_number": extra.get("demand_notice_number", ""),
         "demand_notice_date":   extra.get("demand_notice_date", ""),

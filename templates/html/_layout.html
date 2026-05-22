@@ -116,6 +116,7 @@
       </div>
       <div class="ref">
         Case No.: <b>{{ ctx.disno }}</b><br/>
+        {% if ctx.CHECKING_REPORT_NUMBER %}Checking Report: <b>{{ ctx.CHECKING_REPORT_NUMBER }}</b><br/>{% endif %}
         Date: {{ ctx.Date }}{% if ctx.time11 %} {{ ctx.time11 }}{% endif %}
       </div>
     </div>

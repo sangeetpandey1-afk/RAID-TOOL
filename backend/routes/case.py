@@ -317,7 +317,8 @@ def save_case():
             """UPDATE raid_cases SET
                   online_no=?, consumer_id=?, account_number=?,
                   inspection_date=?, section=?, section_other=?,
-                  checking_type=?, je_name=?, sub_substation=?,
+                  checking_type=?, checking_report_number=?,
+                  je_name=?, sub_substation=?,
                   td_date=?, connected_load_kw=?,
                   user_name=?, user_father=?, user_address=?,
                   devices_json=?, less_unit=?, multiplier=?,
@@ -333,6 +334,7 @@ def save_case():
                 body.get("section"),
                 body.get("section_other"),
                 body.get("checking_type"),
+                (body.get("checking_report_number") or "").strip() or None,
                 body.get("je_name"),
                 body.get("sub_substation"),
                 parse_date(body.get("td_date")),
@@ -360,12 +362,13 @@ def save_case():
             """INSERT INTO raid_cases
                   (case_id, online_no, consumer_id, account_number,
                    inspection_date, section, section_other,
-                   checking_type, je_name, sub_substation, td_date,
+                   checking_type, checking_report_number,
+                   je_name, sub_substation, td_date,
                    connected_load_kw, user_name, user_father, user_address,
                    devices_json, less_unit, multiplier, offense_count,
                    assessment_json, total_assessment, compounding_amount,
                    fir_number, case_status, created_by)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 case_id,
                 body.get("online_no"),
@@ -375,6 +378,7 @@ def save_case():
                 body.get("section"),
                 body.get("section_other"),
                 body.get("checking_type"),
+                (body.get("checking_report_number") or "").strip() or None,
                 body.get("je_name"),
                 body.get("sub_substation"),
                 parse_date(body.get("td_date")),
@@ -510,9 +514,10 @@ def search_cases():
     q = args.get("q")
     if q:
         where.append("(account_number LIKE ? OR online_no LIKE ? "
-                     "OR user_name LIKE ? OR fir_number LIKE ?)")
+                     "OR user_name LIKE ? OR fir_number LIKE ? "
+                     "OR checking_report_number LIKE ?)")
         like = f"%{q}%"
-        params += [like, like, like, like]
+        params += [like, like, like, like, like]
 
     if args.get("account"):
         where.append("account_number=?")
@@ -529,6 +534,9 @@ def search_cases():
     if args.get("fir_number"):
         where.append("fir_number=?")
         params.append(args["fir_number"])
+    if args.get("checking_report_number"):
+        where.append("checking_report_number=?")
+        params.append(args["checking_report_number"].strip())
 
     fr = parse_date(args.get("from_date"))
     to = parse_date(args.get("to_date"))

@@ -17,10 +17,13 @@
       <td class="label">श्रेणी / Category</td><td>{{ ctx.CATEGORY }}</td></tr>
   <tr><td class="label">Section</td><td>{{ ctx.SECTION }}</td>
       <td class="label">निरीक्षण / Inspection</td><td>{{ ctx.dis_date }}</td></tr>
-  <tr><td class="label">Connected Load</td><td>{{ ctx.CONNECTED_LOAD }} kW</td>
-      <td class="label">Sub-Substation</td><td>{{ ctx.SUB_SUBSTATION or "—" }}</td></tr>
-  <tr><td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td>
-      <td class="label">Checking Type</td><td>{{ ctx.CHECKING_TYPE }}</td></tr>
+  <tr><td class="label">Checking Report No.</td>
+      <td>{{ ctx.CHECKING_REPORT_NUMBER or "—" }}</td>
+      <td class="label">Connected Load</td><td>{{ ctx.CONNECTED_LOAD }} kW</td></tr>
+  <tr><td class="label">Sub-Substation</td><td>{{ ctx.SUB_SUBSTATION or "—" }}</td>
+      <td class="label">J.E.</td><td>{{ ctx.JE_NAME }}</td></tr>
+  <tr><td class="label">Checking Type</td><td>{{ ctx.CHECKING_TYPE }}</td>
+      <td class="label">Category</td><td>{{ ctx.CATEGORY }}</td></tr>
 </table>
 
 <h3>उपकरण विवरण / Devices Inspected</h3>
