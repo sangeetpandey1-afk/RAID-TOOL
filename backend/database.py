@@ -88,6 +88,11 @@ def init_schema() -> None:
 _LIGHTWEIGHT_COLUMN_ADDS: list[tuple[str, str, str]] = [
     # (table, column, type)
     ("raid_cases", "checking_report_number", "TEXT"),
+    # Sum of LFHD device wattages (auto-computed in the UI, but operator
+    # can override). Stored separately from connected_load_kw which is the
+    # Contracted/Sanctioned load on the meter — both fields exist on
+    # purpose. Nullable; older rows simply get NULL.
+    ("raid_cases", "total_connected_load_kw", "REAL"),
 ]
 
 _LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
