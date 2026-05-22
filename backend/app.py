@@ -80,10 +80,15 @@ def create_app() -> Flask:
     from .routes.device_rate import bp as devrate_bp
     from .routes.backup import bp as backup_bp
     from .routes.reports import bp as reports_bp
+    # Account-only historical import + offense lookup (PR:
+    # feat/historical-import-offense).  Independent of the older
+    # /api/cases/<id>/offense-check route, which keeps its existing
+    # fuzzy fallback semantics for backward compatibility.
+    from .routes.historical import bp as historical_bp
 
     for bp in (health_bp, master_bp, consumer_bp, case_bp, doc_bp,
                payment_bp, inquiry_bp, notice_bp, devrate_bp,
-               backup_bp, reports_bp):
+               backup_bp, reports_bp, historical_bp):
         app.register_blueprint(bp)
 
     # ----------------- error handlers (no more silent 500s) ----------
