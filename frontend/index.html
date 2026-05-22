@@ -202,13 +202,35 @@
         <span class="small">कनेक्शन विवरण</span></h3>
       <div class="form-grid two-col dense">
         <div>
+          <!--
+            Category and Supply Type options below are placeholders.
+            They are replaced on DOMContentLoaded by category_supply.js
+            from the central tariff_mapping.js. Keeping a static
+            placeholder list here means:
+              - the form is still usable if JS fails to load,
+              - selecting Category triggers the change handler that
+                repopulates Supply Type from the mapping.
+            DO NOT add real codes here — keep the data single-sourced
+            in tariff_mapping.js so the future tariff/calculator
+            engine reads from the same place.
+          -->
           <label>Category
             <select id="f_category">
               <option>LMV-1</option>
               <option>LMV-2</option>
+              <option>LMV-3</option>
+              <option>LMV-4</option>
               <option>LMV-5</option>
-              <option>HV</option>
-              <option>Agriculture</option>
+              <option>LMV-6</option>
+              <option>LMV-7</option>
+              <option>LMV-8</option>
+              <option>LMV-9</option>
+              <option>LMV-10</option>
+              <option>LMV-11</option>
+              <option>HV-1</option>
+              <option>HV-2</option>
+              <option>HV-3</option>
+              <option>HV-4</option>
               <option>Other</option>
             </select>
           </label>
@@ -223,11 +245,11 @@
             </select>
           </label>
           <label>Supply Type
+            <!-- Hydrated by category_supply.js from tariff_mapping.js.
+                 The single placeholder option is shown only briefly
+                 between HTML parse and DOMContentLoaded. -->
             <select id="f_supply">
-              <option>Domestic</option>
-              <option>Commercial</option>
-              <option>Industrial</option>
-              <option>Agricultural</option>
+              <option value="">— select category first —</option>
             </select>
           </label>
         </div>
@@ -482,6 +504,17 @@
     <span>API: <code id="apiBase"></code></span>
   </footer>
 
+  <!-- Tariff mapping: pure data + read-only API. Loaded BEFORE
+       category_supply.js so the linkage glue can read it, and
+       BEFORE app.js so future tariff-engine code in app.js can
+       consume window.RAID_TARIFF_MAPPING synchronously. -->
+  <script src="/frontend/static/tariff_mapping.js"></script>
+  <!-- Category ↔ Supply Type DOM glue. Patches the per-element
+       .value setters of #f_category and #f_supply BEFORE app.js's
+       DOMContentLoaded handler runs, so the existing case-load path
+       (ensureCategoryOption + #f_supply.value = …) keeps working
+       without any change to app.js. -->
+  <script src="/frontend/static/category_supply.js"></script>
   <script src="/frontend/static/app.js"></script>
   <!-- Mobile UX progressive enhancement (hamburger, sticky actions,
        table-as-cards). Loads after app.js, never modifies its state. -->
