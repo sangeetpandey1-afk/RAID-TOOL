@@ -342,9 +342,113 @@
 
 
 
+/* ==================================================================
+   8. NEW CASE — raid-grid (flat 4-column form layout)
+   ------------------------------------------------------------------
+   Used by Section 1 (Basic Raid Details) and Section 2 (User Found
+   at Premises) on the New Case panel after the layout cleanup PR.
+
+   Each <label> is a direct grid child so the row order in the markup
+   IS the on-screen left-to-right order — no inner column wrappers,
+   no auto-fit reshuffling. This guarantees:
+
+       desktop  : 4 fields per row, exactly as the spec dictates
+       tablet   : 2 fields per row
+       phone    : 1 field per row (mobile.css already targets <=768px,
+                  this rule cooperates rather than overrides)
+
+   `.checkbox-cell` is a special grid child used in User row 3 to host
+   BOTH auto-fill toggles in a single visual cluster. It spans the
+   last two columns on desktop so the row reads:
+       Pin Code | District | [ Consumer-User same / Address same ]
+   ================================================================== */
+
+.form-grid.raid-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 0 0 10px;
+  align-items: start;
+}
+
+.form-grid.raid-grid > label {
+  margin: 0;
+  /* keep label internal flow consistent with the rest of the form */
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* The Total Connected Load auto-hint sits inside its label as a
+   sibling of the input; let it shrink to content so it doesn't
+   force the cell wider than its grid track. */
+.form-grid.raid-grid .auto-hint {
+  align-self: flex-start;
+}
+
+/* ----- Checkbox cluster cell (User section, row 3) ----- */
+.form-grid.raid-grid .checkbox-cell {
+  grid-column: span 2;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 10px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+}
+.form-grid.raid-grid .checkbox-cell .check-row {
+  margin: 0;
+  padding: 1px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  align-items: flex-start;
+  gap: 6px;
+}
+.form-grid.raid-grid .checkbox-cell .check-row > span {
+  display: inline-block;
+  line-height: 1.35;
+}
+.form-grid.raid-grid .checkbox-cell .check-row .small {
+  color: var(--muted);
+  font-weight: 400;
+}
 
 /* ==================================================================
-   8. LFHD GROUPED SUMMARY (#lfhdSummary)
+   8.1  Tablet (769–1100px) — 2 columns, checkbox still spans 2
+   ================================================================== */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .form-grid.raid-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+  }
+  .form-grid.raid-grid .checkbox-cell {
+    grid-column: span 2;
+  }
+}
+
+/* ==================================================================
+   8.2  Phone (<=768px) — single column, full-width checkbox cell.
+        mobile.css owns most phone overrides; this just declares the
+        column count for our new modifier so it doesn't fall back to
+        the desktop 4-col rule.
+   ================================================================== */
+@media (max-width: 768px) {
+  .form-grid.raid-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .form-grid.raid-grid .checkbox-cell {
+    grid-column: span 1;
+  }
+}
+
+
+/* ==================================================================
+   9. LFHD GROUPED SUMMARY (#lfhdSummary)
    ------------------------------------------------------------------
    Compact, monospace-flavoured presentation of the printed legal
    math line   load × hours × factor × days = units   for each

@@ -72,61 +72,110 @@
       <!-- ========== SECTION 1 — BASIC RAID DETAILS ========== -->
       <h3 class="sec-title"><span class="sec-num">1</span> Basic Raid Details
         <span class="small">मूलभूत विवरण</span></h3>
-      <div class="form-grid two-col dense">
-        <div>
-          <label>Division No <input id="f_div_code" type="text" /></label>
-          <label>Checking Report Number
-            <input id="f_checking_report_number" type="text"
-                   placeholder="e.g. CR-2026-001" />
-          </label>
-          <label>Checking Date <input id="f_inspection" type="date" /></label>
-          <label>JE Name <input id="f_je" type="text" /></label>
-          <label>Account Number
-            <input id="f_account" type="text"
-                   placeholder="leave blank for direct theft (no account)" />
-          </label>
-          <label>Consumer Name (नाम)
-            <input id="f_name" type="text" lang="hi" />
-          </label>
-        </div>
-        <div>
-          <label>Village (गाँव) <input id="f_village" type="text" lang="hi" /></label>
-          <label>Landmark (लैंडमार्क) <input id="f_landmark" type="text" lang="hi" /></label>
-          <label>Post Office (पोस्ट) <input id="f_post" type="text" lang="hi" /></label>
-          <label>Tehsil (तहसील) <input id="f_tehsil" type="text" lang="hi" /></label>
-          <label>Pin Code <input id="f_pin" type="text" /></label>
-          <label>District (जनपद) <input id="f_district" type="text" lang="hi" /></label>
-        </div>
-      </div>
+      <!--
+        Consolidated 6-row layout (PR: form-layout-cleanup).
+        All consumer + connection fields now live in a single flat
+        4-column grid for natural left-to-right flow. The redundant
+        free-text Address field is hidden (kept in DOM for save/load
+        round-trip with the existing `address` DB column and for the
+        copyConsumerAddressToUser() helper in app.js).
+      -->
+      <div class="form-grid raid-grid">
 
-      <!-- Secondary / less-frequent consumer details — kept editable but
-           visually muted so they don't crowd the primary 12 fields above.
-           Online Number lives here per spec ("can stay editable but should
-           appear later/secondary"). Father / Mobile / Address are needed
-           by existing notice templates (USERS_FATHER etc.) so they remain. -->
-      <details class="secondary-details" open>
-        <summary>Secondary details (Online No., Father, Mobile, Address)</summary>
-        <div class="form-grid two-col dense">
-          <div>
-            <label>Online No. <input id="f_online_no" type="text" /></label>
-            <label>Father / पिता
-              <input id="f_father" type="text" lang="hi" />
-            </label>
-            <label>Mobile <input id="f_mobile" type="text" /></label>
-          </div>
-          <div>
-            <label>Address (पता)
-              <input id="f_address" type="text" lang="hi" />
-            </label>
-            <label>Sub-Substation <input id="f_substation" type="text" /></label>
-            <label>Checking Type
-              <select id="f_checking">
-                <option>Vigilance</option><option>Routine</option><option>Special</option>
-              </select>
-            </label>
-          </div>
-        </div>
-      </details>
+        <!-- ROW 1 — case meta -->
+        <label>Division No <input id="f_div_code" type="text" /></label>
+        <label>Checking Report Number
+          <input id="f_checking_report_number" type="text"
+                 placeholder="e.g. CR-2026-001" />
+        </label>
+        <label>Checking Date <input id="f_inspection" type="date" /></label>
+        <label>JE Name <input id="f_je" type="text" /></label>
+
+        <!-- ROW 2 — consumer identity -->
+        <label>Account Number
+          <input id="f_account" type="text"
+                 placeholder="leave blank for direct theft (no account)" />
+        </label>
+        <label>Consumer Name (नाम)
+          <input id="f_name" type="text" lang="hi" />
+        </label>
+        <label>Father (पिता)
+          <input id="f_father" type="text" lang="hi" />
+        </label>
+        <label>Mobile <input id="f_mobile" type="text" /></label>
+
+        <!-- ROW 3 — address part 1 -->
+        <label>Village (गाँव) <input id="f_village" type="text" lang="hi" /></label>
+        <label>Landmark (लैंडमार्क) <input id="f_landmark" type="text" lang="hi" /></label>
+        <label>Post Office (पोस्ट) <input id="f_post" type="text" lang="hi" /></label>
+        <label>Tehsil (तहसील) <input id="f_tehsil" type="text" lang="hi" /></label>
+
+        <!-- ROW 4 — address part 2 + ids -->
+        <label>Pin Code <input id="f_pin" type="text" /></label>
+        <label>District (जनपद) <input id="f_district" type="text" lang="hi" /></label>
+        <label>Online No. <input id="f_online_no" type="text" /></label>
+        <label>Sub-Substation <input id="f_substation" type="text" /></label>
+
+        <!-- ROW 5 — classification -->
+        <label>Checking Type
+          <select id="f_checking">
+            <option>Vigilance</option><option>Routine</option><option>Special</option>
+          </select>
+        </label>
+        <label>Category
+          <select id="f_category">
+            <option>LMV-1</option>
+            <option>LMV-2</option>
+            <option>LMV-5</option>
+            <option>HV</option>
+            <option>Agriculture</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Process / Usage Type
+          <select id="f_process_type">
+            <option value="">— select —</option>
+            <option>Domestic / Gharelu</option>
+            <option>Commercial</option>
+            <option>Agriculture</option>
+            <option>Industrial</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Supply Type
+          <select id="f_supply">
+            <option>Domestic</option>
+            <option>Commercial</option>
+            <option>Industrial</option>
+            <option>Agricultural</option>
+          </select>
+        </label>
+
+        <!-- ROW 6 — connection + load (3 cells; col-4 left blank by design) -->
+        <label>Connection Status
+          <select id="f_conn_status">
+            <option>Active</option>
+            <option>Disconnected</option>
+            <option>Permanently Disconnected</option>
+          </select>
+        </label>
+        <label>Contracted Load (kW)
+          <input id="f_load" type="number" step="0.001" />
+        </label>
+        <label>Total Connected Load (kW)
+          <input id="f_total_connected_load" type="number" step="0.001"
+                 placeholder="auto from devices · editable" />
+          <span class="small auto-hint" id="totalLoadHint">
+            auto · sum of LFHD device loads
+          </span>
+        </label>
+
+        <!-- Hidden: redundant free-text address replaced by the structured
+             village/landmark/post/tehsil/pin/district fields above. Element
+             is kept so app.js (#f_address) and the `address` DB column keep
+             round-tripping unchanged. -->
+        <input type="hidden" id="f_address" />
+      </div>
 
       <!-- ========== SECTION 2 — USER FOUND AT PREMISES ========== -->
       <h3 class="sec-title"><span class="sec-num">2</span> User Found at Premises
@@ -137,123 +186,87 @@
         रूप में आएगा।
       </p>
 
-      <div class="user-flags">
-        <label class="check-row">
-          <input type="checkbox" id="chk_user_same" />
-          <b>Consumer and User same</b>
-          <span class="small">(auto-fill name, father, mobile · relation = Self)</span>
-        </label>
-        <label class="check-row">
-          <input type="checkbox" id="chk_addr_same" />
-          <b>User address same as consumer</b>
-          <span class="small">(auto-fill address, village, landmark, post, pin, tehsil, district)</span>
-        </label>
-      </div>
+      <!--
+        User section mirrors the consumer 4-col grid. Row 3 has Pin Code,
+        District, then a checkbox cell (spans the last 2 columns) holding
+        BOTH consumer/user-same and user-address-same toggles. The two
+        checkbox IDs (#chk_user_same, #chk_addr_same) are unchanged so
+        setupUserAutofillCheckboxes() in app.js continues to bind them.
+      -->
+      <div class="form-grid raid-grid">
 
-      <div class="form-grid two-col dense">
-        <div>
-          <label>User Name (नाम)
-            <input id="f_user_name" type="text" lang="hi" />
-          </label>
-          <label>User's Father (पिता)
-            <input id="f_user_father" type="text" lang="hi" />
-          </label>
-          <label>Relation With Consumer
-            <select id="f_user_relation">
-              <option value="">— select —</option>
-              <option>Self</option>
-              <option>Son</option>
-              <option>Wife</option>
-              <option>Father</option>
-              <option>Brother</option>
-              <option>Tenant</option>
-              <option>Employee</option>
-              <option>Relative</option>
-              <option>Other</option>
-            </select>
-          </label>
-          <label>Mobile <input id="f_user_mobile" type="text" /></label>
-          <label>Address (पता)
-            <input id="f_user_address" type="text" lang="hi" />
-          </label>
-        </div>
-        <div>
-          <label>Landmark (लैंडमार्क)
-            <input id="f_user_landmark" type="text" lang="hi" />
-          </label>
-          <label>Village (गाँव)
-            <input id="f_user_village" type="text" lang="hi" />
-          </label>
-          <label>Post Office (पोस्ट)
-            <input id="f_user_post" type="text" lang="hi" />
-          </label>
-          <label>Tehsil (तहसील)
-            <input id="f_user_tehsil" type="text" lang="hi" />
-          </label>
-          <label>Pin Code <input id="f_user_pin" type="text" /></label>
-          <label>District (जनपद)
-            <input id="f_user_district" type="text" lang="hi" />
-          </label>
-        </div>
-      </div>
+        <!-- ROW 1 — user identity -->
+        <label>User Name (नाम)
+          <input id="f_user_name" type="text" lang="hi" />
+        </label>
+        <label>User's Father (पिता)
+          <input id="f_user_father" type="text" lang="hi" />
+        </label>
+        <label>Relation With Consumer
+          <select id="f_user_relation">
+            <option value="">— select —</option>
+            <option>Self</option>
+            <option>Son</option>
+            <option>Wife</option>
+            <option>Father</option>
+            <option>Brother</option>
+            <option>Tenant</option>
+            <option>Employee</option>
+            <option>Relative</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>Mobile <input id="f_user_mobile" type="text" /></label>
 
-      <!-- ========== SECTION 3 — CONNECTION DETAILS ========== -->
-      <h3 class="sec-title"><span class="sec-num">3</span> Connection Details
-        <span class="small">कनेक्शन विवरण</span></h3>
-      <div class="form-grid two-col dense">
-        <div>
-          <label>Category
-            <select id="f_category">
-              <option>LMV-1</option>
-              <option>LMV-2</option>
-              <option>LMV-5</option>
-              <option>HV</option>
-              <option>Agriculture</option>
-              <option>Other</option>
-            </select>
+        <!-- ROW 2 — address part 1 -->
+        <label>Landmark (लैंडमार्क)
+          <input id="f_user_landmark" type="text" lang="hi" />
+        </label>
+        <label>Village (गाँव)
+          <input id="f_user_village" type="text" lang="hi" />
+        </label>
+        <label>Post Office (पोस्ट)
+          <input id="f_user_post" type="text" lang="hi" />
+        </label>
+        <label>Tehsil (तहसील)
+          <input id="f_user_tehsil" type="text" lang="hi" />
+        </label>
+
+        <!-- ROW 3 — pin + district + grouped checkboxes (last cell spans 2) -->
+        <label>Pin Code <input id="f_user_pin" type="text" /></label>
+        <label>District (जनपद)
+          <input id="f_user_district" type="text" lang="hi" />
+        </label>
+        <div class="checkbox-cell" role="group" aria-label="User auto-fill toggles">
+          <label class="check-row">
+            <input type="checkbox" id="chk_user_same" />
+            <span>
+              <b>Consumer and User same</b>
+              <span class="small"> · auto-fill name · father · mobile · relation = Self</span>
+            </span>
           </label>
-          <label>Process / Usage Type
-            <select id="f_process_type">
-              <option value="">— select —</option>
-              <option>Domestic / Gharelu</option>
-              <option>Commercial</option>
-              <option>Agriculture</option>
-              <option>Industrial</option>
-              <option>Other</option>
-            </select>
-          </label>
-          <label>Supply Type
-            <select id="f_supply">
-              <option>Domestic</option>
-              <option>Commercial</option>
-              <option>Industrial</option>
-              <option>Agricultural</option>
-            </select>
-          </label>
-        </div>
-        <div>
-          <label>Connection Status
-            <select id="f_conn_status">
-              <option>Active</option>
-              <option>Disconnected</option>
-              <option>Permanently Disconnected</option>
-            </select>
-          </label>
-          <label>Contracted Load (kW)
-            <input id="f_load" type="number" step="0.001" />
-          </label>
-          <label>Total Connected Load (kW)
-            <input id="f_total_connected_load" type="number" step="0.001"
-                   placeholder="auto from devices · editable" />
-            <span class="small auto-hint" id="totalLoadHint">
-              auto · sum of LFHD device loads
+          <label class="check-row">
+            <input type="checkbox" id="chk_addr_same" />
+            <span>
+              <b>User address same as consumer</b>
+              <span class="small"> · auto-fill village · landmark · post · pin · tehsil · district</span>
             </span>
           </label>
         </div>
+
+        <!-- Hidden: same reasoning as #f_address — kept for app.js
+             (#f_user_address) and the user_address payload field. -->
+        <input type="hidden" id="f_user_address" />
       </div>
 
-      <!-- ========== SECTION 4 — DEVICE DETAILS (LFHD) ========== -->
-      <h3 class="sec-title"><span class="sec-num">4</span> Device Details (LFHD)
+      <!-- Connection Details fields (Category, Process Type, Supply Type,
+           Connection Status, Contracted Load, Total Connected Load) have
+           been merged into Section 1 rows 5–6 for a single continuous
+           top-of-form flow. No fields removed; only the section heading
+           and its dedicated grid wrapper are gone. -->
+
+      <!-- ========== SECTION 3 — DEVICE DETAILS (LFHD) ========== -->
+      <h3 class="sec-title"><span class="sec-num">3</span> Device Details (LFHD)
         <span class="small">उपकरण विवरण</span></h3>
       <table class="data-table" id="devicesTable">
         <thead>
@@ -277,6 +290,8 @@
             (sum of loads in kW) × Hours × Factor × Days = Units
         This is the printed/legal-style presentation; the entry table
         above remains the operator's working surface and is unchanged.
+        Lives inside the (renumbered) Section 3 — Devices block; not
+        a section of its own, so it carries no .sec-num badge.
       -->
       <h3 class="lfhd-heading">LFHD Summary <span class="small">(grouped Load × Hours × Factor × Days)</span></h3>
       <div class="card lfhd-summary" id="lfhdSummary">
@@ -286,8 +301,10 @@
         </div>
       </div>
 
-      <!-- ========== SECTION 5 — LEGAL / EXTRA ========== -->
-      <h3 class="sec-title"><span class="sec-num">5</span> Legal / Extra
+      <!-- ========== SECTION 4 — LEGAL / EXTRA ==========
+           Renumbered from 5 -> 4 by feat/form-layout-cleanup, which
+           merged the old Connection Details (Section 3) into Section 1. -->
+      <h3 class="sec-title"><span class="sec-num">4</span> Legal / Extra
         <span class="small">कानूनी / अतिरिक्त</span></h3>
       <div class="form-grid two-col dense">
         <div>
@@ -345,7 +362,7 @@
       <h3>Saved Case</h3>
       <div class="card" id="savedCase">No case saved yet.</div>
 
-      <!-- ========== SECTION 6 — STICKY ACTION BAR ========== -->
+      <!-- ========== STICKY ACTION BAR ========== -->
       <!-- The .sticky-mobile class is recognised by mobile.js (PR #7).
            On desktop we add .sticky-desktop so it sticks to viewport
            bottom there too — pure CSS in compact.css, no JS change. -->
