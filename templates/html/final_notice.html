@@ -9,6 +9,9 @@
 <p class="small right">
   Notice No.: {{ ctx.final_notice_no or ctx.disno + "-FN" }} ·
   जारी दिनांक / Issued: {{ ctx.Date }}
+  {% if ctx.CHECKING_REPORT_NUMBER %}<br/>
+  Checking Report No.: <b>{{ ctx.CHECKING_REPORT_NUMBER }}</b>
+  {% endif %}
 </p>
 
 <p>

@@ -1,0 +1,210 @@
+/* ==================================================================
+   Raid Management System — compact dense desktop layer (ADDITIVE)
+   ------------------------------------------------------------------
+   Loaded AFTER styles.css and mobile.css. Three goals:
+
+     1. DENSE DEFAULT — smaller field heights, paddings, gaps and
+        margins so more useful fields fit on one screen.
+     2. FOCUS EXPANSION — when a field receives focus, it gently grows
+        (height, font-size, padding) so the operator can comfortably
+        read what they're typing. Default view stays compact.
+     3. RESPONSIVE GRID — desktop 3–4 effective columns via a
+        .form-grid.dense modifier that turns each inner column into
+        an auto-fit mini-grid; tablet collapses to 2; phone stays at
+        1 (mobile.css already handles that).
+
+   Hard rules:
+     - All rules are scoped under @media (min-width: 769px) so the
+       phone layer (mobile.css, <=768px) is NEVER overridden.
+     - No existing class is renamed. Only properties are tightened
+       and a single new modifier ".dense" is introduced.
+     - No layout/structure depends on JS — pure CSS.
+   ================================================================== */
+
+/* ==================================================================
+   1. DESKTOP + TABLET BASE (>=769px) — compact defaults
+   ================================================================== */
+@media (min-width: 769px) {
+
+  /* ---------- 1.1 Topbar / panels — slimmer ---------- */
+  .topbar      { padding: 8px 18px; }
+  .brand-hi    { font-size: 16px; }
+  .brand-en    { font-size: 11px; }
+  .health      { padding: 4px 10px; font-size: 11px; }
+
+  .tab         { padding: 9px 14px; font-size: 13px; }
+  .content     { padding: 14px 18px; }
+
+  h2           { font-size: 16px; margin: 0 0 10px; }
+  h3           { font-size: 13px; margin: 12px 0 6px; }
+
+  /* ---------- 1.2 Forms — denser default ---------- */
+  .form-grid               { gap: 10px; margin-bottom: 8px; }
+  .form-grid > div         { gap: 6px; }
+
+  label                    { gap: 2px; font-size: 11px; }
+  label.check-row          { padding: 2px 0; font-size: 12px; }
+  label.indent             { margin-left: 18px; padding-left: 8px; }
+
+  input,
+  select,
+  textarea {
+    padding: 5px 9px;
+    font-size: 13px;
+    min-height: 28px;
+    line-height: 1.35;
+    transition: padding 0.12s, font-size 0.12s, min-height 0.12s,
+                box-shadow 0.12s;
+  }
+  /* Date pickers and number spinners have intrinsic widgets — give
+     them a touch more breathing room so the chrome isn't clipped. */
+  input[type="date"],
+  input[type="number"]     { padding-right: 6px; }
+
+  /* ---------- 1.3 FOCUS EXPANSION — grow only while typing ---------- */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    padding: 7px 11px;
+    font-size: 14px;
+    min-height: 34px;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(48, 84, 150, 0.18);
+    outline: none;
+  }
+  /* When any field inside a label gains focus, lift the label too. */
+  label:focus-within {
+    color: var(--primary);
+  }
+
+  /* ---------- 1.4 Buttons — slimmer rows on desktop ---------- */
+  .btn         { padding: 5px 11px; font-size: 12.5px; min-height: 28px; }
+  .btn.small   { padding: 3px 7px; font-size: 11px; min-height: 22px; }
+  .actions-row { gap: 6px; margin: 6px 0 10px; }
+
+  /* ---------- 1.5 KPI cards — tighter ---------- */
+  .kpi-grid    { gap: 8px; margin-bottom: 10px; }
+  .kpi         { padding: 8px 12px; }
+  .kpi-label   { font-size: 11px; }
+  .kpi-value   { font-size: 18px; margin-top: 2px; }
+
+  /* ---------- 1.6 Generic cards / detail / doc-toolbar ---------- */
+  .card                 { padding: 8px 12px; }
+  .detail-grid          { gap: 4px 16px; }
+  .doc-toolbar-row      { padding: 6px; gap: 4px; }
+  .doc-toolbar-row .btn { padding: 4px 10px; }
+  .stage-panel          { gap: 6px; padding: 6px 10px; }
+  .stage-panel .tick    { padding: 3px 8px; font-size: 11px; }
+  .stage-row            { gap: 3px; }
+
+  /* ---------- 1.7 Tables — denser rows on desktop ---------- */
+  .data-table             { font-size: 12.5px; }
+  .data-table thead th    { padding: 6px 8px; }
+  .data-table tbody td    { padding: 5px 8px; }
+  .data-table .actions-col .btn {
+    margin-right: 2px;
+    padding: 3px 7px;
+    font-size: 11px;
+    min-height: 22px;
+  }
+
+  /* Devices table inputs — these are inside data-table cells, so
+     keep them as compact as possible by default and let focus expand. */
+  .data-table input {
+    padding: 3px 6px;
+    font-size: 12px;
+    min-height: 24px;
+  }
+  .data-table input:focus {
+    padding: 5px 8px;
+    font-size: 13px;
+    min-height: 28px;
+  }
+
+  /* ---------- 1.8 Cases toolbar / legend — compact ---------- */
+  .cases-toolbar { gap: 10px; }
+  .cases-legend  { gap: 12px; font-size: 11px; margin-bottom: 6px; }
+
+  /* ---------- 1.9 Footer — slimmer ---------- */
+  .footer { padding: 6px 18px; font-size: 11px; }
+}
+
+/* ==================================================================
+   2. .form-grid.dense — RESPONSIVE PROFESSIONAL GRID
+   ------------------------------------------------------------------
+   Existing structure is:
+     <div class="form-grid two-col">
+       <div> labels... </div>   <!-- left outer column -->
+       <div> labels... </div>   <!-- right outer column -->
+     </div>
+   By adding the `dense` modifier we turn each inner <div> into its
+   own auto-fit grid of labels. Combined with the parent's two-col,
+   this yields:
+     - Wide desktop (>=1280px): ~4 effective columns
+     - Mid  desktop (1025-1279): ~3 effective columns
+     - Tablet (769-1024)        : 2 columns (parent collapses inner
+                                   to single mini-col due to width)
+     - Phone (<=768)            : 1 column (mobile.css overrides parent)
+   ================================================================== */
+@media (min-width: 769px) {
+
+  /* Two-col parent + dense → auto-fit mini-grid inside each outer column */
+  .form-grid.two-col.dense > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 6px 14px;
+    align-content: start;
+  }
+  /* Three-col parent + dense → tighter inner mini-grid */
+  .form-grid.three-col.dense > div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 6px 12px;
+    align-content: start;
+  }
+
+  /* Inside .dense, labels stay tight; check-rows span the full width
+     so the descriptive label + checkbox don't get split awkwardly. */
+  .form-grid.dense label                { margin: 0; }
+  .form-grid.dense label.check-row      { grid-column: 1 / -1; }
+  .form-grid.dense label.indent         { grid-column: 1 / -1; margin-left: 22px; }
+}
+
+/* ==================================================================
+   3. TABLET (769–1024) — slightly more breathing room than desktop
+   ================================================================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet outer two-col already collapses to 2 columns naturally;
+     allow inner dense grids to fall back to a single mini-column when
+     space is tight, so labels never get squished. */
+  .form-grid.two-col.dense > div {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .form-grid.three-col.dense > div {
+    grid-template-columns: 1fr;
+  }
+  /* Slightly larger touch targets on tablet without breaking the
+     dense desktop look. */
+  input, select, textarea { min-height: 32px; padding: 6px 10px; font-size: 13.5px; }
+  .btn  { min-height: 32px; padding: 6px 12px; font-size: 13px; }
+}
+
+/* ==================================================================
+   4. WIDE DESKTOP (>=1400px) — push to 4 effective columns
+   ================================================================== */
+@media (min-width: 1400px) {
+  .form-grid.two-col.dense > div {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  .content { padding: 16px 24px; }
+}
+
+/* ==================================================================
+   5. PRINT — keep dense layout but drop the focus glow / animation
+   ================================================================== */
+@media print {
+  input, select, textarea {
+    box-shadow: none !important;
+    transition: none !important;
+  }
+}

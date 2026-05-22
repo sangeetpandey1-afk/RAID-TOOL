@@ -8,6 +8,9 @@
 <p class="right small">
   Notice No.: <b>{{ ctx.sec3_no or ctx.disno + "-S3" }}</b> ·
   Date: <b>{{ ctx.sec3_date }}</b>
+  {% if ctx.CHECKING_REPORT_NUMBER %}<br/>
+  Checking Report No.: <b>{{ ctx.CHECKING_REPORT_NUMBER }}</b>
+  {% endif %}
 </p>
 
 <p>

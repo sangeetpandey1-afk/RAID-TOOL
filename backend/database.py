@@ -71,8 +71,46 @@ def init_schema() -> None:
     with standalone_connection() as conn:
         conn.executescript(sql)
     log.info("Schema initialized at %s", DB_PATH)
+    _apply_lightweight_migrations()
     _seed_devices_if_empty()
     _seed_config_if_empty()
+
+
+# ------------------------------------------------------------------ migrations
+# Lightweight, idempotent column/index additions for older databases.
+# Each migration must be:
+#   * additive only (ADD COLUMN / CREATE INDEX, never DROP / RENAME / ALTER)
+#   * guarded by an existence check (PRAGMA table_info / sqlite_master)
+#   * safe to run on every boot (no-op if already applied)
+#
+# DO NOT add destructive operations here. For schema redesigns, write a
+# proper migration script under scripts/ instead.
+_LIGHTWEIGHT_COLUMN_ADDS: list[tuple[str, str, str]] = [
+    # (table, column, type)
+    ("raid_cases", "checking_report_number", "TEXT"),
+]
+
+_LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
+    # (index_name, create_sql)
+    ("idx_case_check_report",
+     "CREATE INDEX IF NOT EXISTS idx_case_check_report "
+     "ON raid_cases(checking_report_number)"),
+]
+
+
+def _apply_lightweight_migrations() -> None:
+    """Add nullable columns / indexes that newer code expects, idempotently."""
+    with standalone_connection() as conn:
+        for table, column, coltype in _LIGHTWEIGHT_COLUMN_ADDS:
+            existing = {r["name"] for r in
+                        conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if column not in existing:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"
+                )
+                log.info("Migration: added %s.%s (%s)", table, column, coltype)
+        for _name, sql in _LIGHTWEIGHT_INDEX_ADDS:
+            conn.execute(sql)
 
 
 # ------------------------------------------------------------------ seed

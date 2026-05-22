@@ -248,7 +248,6 @@ function buildCaseRequest() {
   return {
     account_number:    $("#f_account").value.trim(),
     online_no:         $("#f_online_no").value.trim(),
-    sc_number:         $("#f_sc_number").value.trim(),
     name:              $("#f_name").value.trim(),
     father_name:       $("#f_father").value.trim(),
     address:           $("#f_address").value.trim(),
@@ -274,6 +273,7 @@ function buildCaseRequest() {
     je_name:           $("#f_je").value.trim(),
     sub_substation:    $("#f_substation").value.trim(),
     checking_type:     $("#f_checking").value,
+    checking_report_number: $("#f_checking_report_number").value.trim(),
     fir_number:        $("#f_fir").value.trim(),
 
     user_name:         $("#f_user_name").value.trim(),
@@ -310,7 +310,6 @@ async function lookupConsumer() {
   setIf("#f_district",    c.district);
   setIf("#f_div_code",    c.div_code);
   setIf("#f_mobile",      c.mobile);
-  setIf("#f_sc_number",   c.sc_number);
   setIf("#f_substation",  c.sub_substation);
   if (c.category)    $("#f_category").value = c.category;
   if (c.supply_type) $("#f_supply").value   = c.supply_type;
@@ -456,7 +455,10 @@ async function refreshCases() {
             <span class="small">${escapeHtml(c.consumer_village || "")}</span>
             ${repeatBadge(o)}</td>
         <td>${escapeHtml(c.section || "")}<br/>
-            <span class="small">${escapeHtml(c.inspection_date || "")}</span></td>
+            <span class="small">${escapeHtml(c.inspection_date || "")}</span>
+            ${c.checking_report_number
+                ? `<br/><span class="small" title="Checking Report Number">CR: <code>${escapeHtml(c.checking_report_number)}</code></span>`
+                : ""}</td>
         <td class="num">${fmtMoney(c.total_assessment)}<br/>
             <span class="small">+ ${fmtMoney(c.compounding_amount || 0)}</span></td>
         <td>${paymentPill(p)}<br/>
@@ -520,6 +522,9 @@ async function loadCase(cid) {
       <div>Mobile: ${escapeHtml(consumer.mobile || "")} · Category: ${escapeHtml(consumer.category || "")}</div>
       <div>Section: ${escapeHtml(c.section || "")} · Inspection: ${escapeHtml(c.inspection_date || "")}
            ${c.td_date ? ` · TD: ${escapeHtml(c.td_date)}` : ""}</div>
+      ${c.checking_report_number
+          ? `<div>Checking Report No.: <b>${escapeHtml(c.checking_report_number)}</b></div>`
+          : ""}
       <div>Assessment: ₹ <b>${fmtMoney(c.total_assessment)}</b> · Compounding: ₹ ${fmtMoney(c.compounding_amount)}</div>
       <div>J.E.: ${escapeHtml(c.je_name || "")} · Sub-station: ${escapeHtml(c.sub_substation || "")}</div>
       ${c.fir_number ? `<div>FIR: <b>${escapeHtml(c.fir_number)}</b></div>` : ""}
