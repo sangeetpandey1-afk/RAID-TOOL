@@ -125,6 +125,38 @@
       ]
     },
 
+    /* ---------------------------------------------------------------
+     * Subcategories per category (PR: feat/rate-master-tariff-timeline)
+     * ---------------------------------------------------------------
+     * Drives the new #f_subcategory dropdown.  These labels match the
+     * subcategory column in the backend `tariff_rates` table, so the
+     * live-tariff-preview lookup can resolve a (category, subcategory)
+     * pair to a concrete rate row.  Lists are intentionally short:
+     *   - LMV-1 / LMV-5 split urban vs rural,
+     *   - LMV-2 splits urban into ≤4KW and >4KW load bands,
+     *   - everything else gets a single 'Default' placeholder so the
+     *     dropdown is never empty (operator can still edit
+     *     tariff_mapping.js to add real subcategories later).
+     * ------------------------------------------------------------- */
+    subcategories: {
+      'LMV-1':  ['Rural', 'Urban'],
+      'LMV-2':  ['Rural', 'Urban ≤4KW', 'Urban >4KW'],
+      'LMV-3':  ['Default'],
+      'LMV-4':  ['Default'],
+      'LMV-5':  ['Rural', 'Urban'],
+      'LMV-6':  ['Default'],
+      'LMV-7':  ['Default'],
+      'LMV-8':  ['Default'],
+      'LMV-9':  ['Default'],
+      'LMV-10': ['Default'],
+      'LMV-11': ['Default'],
+      'HV-1':   ['Default'],
+      'HV-2':   ['Default'],
+      'HV-3':   ['Default'],
+      'HV-4':   ['Default'],
+      'Other':  ['Default']
+    },
+
     /* ---------- pure read APIs ---------- */
 
     /** Returns a copy of the master category list. */
@@ -136,6 +168,17 @@
      *  or [] if the category is unknown.                         */
     getSupplyTypes: function (category) {
       var arr = this.supplyTypes[category];
+      return arr ? arr.slice() : [];
+    },
+
+    /** Returns a copy of the subcategory list for `category`, or
+     *  [] if the category is unknown. The returned strings are the
+     *  human-facing labels — they're stored verbatim in the case
+     *  payload as `subcategory` and are matched against the
+     *  `subcategory` column in the `tariff_rates` table by the
+     *  backend tariff engine.                                     */
+    getSubcategories: function (category) {
+      var arr = this.subcategories[category];
       return arr ? arr.slice() : [];
     },
 
