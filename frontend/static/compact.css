@@ -339,3 +339,78 @@
   background: #d1fae5;
   border-color: #6ee7b7;
 }
+
+
+
+
+/* ==================================================================
+   8. LFHD GROUPED SUMMARY (#lfhdSummary)
+   ------------------------------------------------------------------
+   Compact, monospace-flavoured presentation of the printed legal
+   math line   load × hours × factor × days = units   for each
+   (H, F, D) bucket of devices entered above. Pure additive layer:
+   no other selector here is touched, no JS depends on these classes
+   beyond what lfhd_grouper.js already produces.
+   ================================================================== */
+
+.lfhd-heading {
+  font-size: 12px;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  color: var(--primary, #305496);
+  font-weight: 600;
+}
+
+.lfhd-summary { padding: 8px 12px; }
+
+.lfhd-summary .lfhd-empty   { color: var(--muted, #6b7280); }
+
+.lfhd-summary .lfhd-rows {
+  list-style: decimal inside;
+  margin: 0;
+  padding: 0;
+}
+.lfhd-summary .lfhd-rows li {
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border, #e5e7eb);
+}
+.lfhd-summary .lfhd-rows li:last-child { border-bottom: none; }
+
+.lfhd-summary .lfhd-math {
+  font-family: ui-monospace, "Cascadia Mono", "Roboto Mono", Consolas, monospace;
+  font-size: 13px;
+  background: #f8fafc;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: #1e3a8a;
+}
+
+.lfhd-summary .lfhd-units   { margin-left: 4px; color: var(--muted, #6b7280); }
+
+.lfhd-summary .lfhd-devices {
+  color: var(--muted, #6b7280);
+  margin-top: 2px;
+  margin-left: 22px;
+  font-size: 11px;
+}
+
+.lfhd-summary .lfhd-total {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1.5px solid var(--primary, #305496);
+  font-size: 13px;
+}
+.lfhd-summary .lfhd-total code {
+  font-family: ui-monospace, monospace;
+  background: #ecfdf5;
+  color: #047857;
+  padding: 1px 8px;
+  border-radius: 3px;
+  border: 1px solid #a7f3d0;
+}
+
+/* Phone — keep the math readable, allow the device list to wrap. */
+@media (max-width: 768px) {
+  .lfhd-summary .lfhd-math    { font-size: 12px; }
+  .lfhd-summary .lfhd-devices { margin-left: 18px; }
+}

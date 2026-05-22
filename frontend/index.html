@@ -270,6 +270,22 @@
         <button class="btn primary" data-action="live-calc">Live Calculate</button>
       </div>
 
+      <!--
+        LFHD grouped summary — populated by lfhd_grouper.js.
+        Rows in #devicesBody that share the same Hours / Factor / Days
+        collapse here into one math line:
+            (sum of loads in kW) × Hours × Factor × Days = Units
+        This is the printed/legal-style presentation; the entry table
+        above remains the operator's working surface and is unchanged.
+      -->
+      <h3 class="lfhd-heading">LFHD Summary <span class="small">(grouped Load × Hours × Factor × Days)</span></h3>
+      <div class="card lfhd-summary" id="lfhdSummary">
+        <div class="lfhd-empty small">
+          Fill in Load, Factor, Hours and Days for at least one device
+          to see the grouped LFHD math.
+        </div>
+      </div>
+
       <!-- ========== SECTION 5 — LEGAL / EXTRA ========== -->
       <h3 class="sec-title"><span class="sec-num">5</span> Legal / Extra
         <span class="small">कानूनी / अतिरिक्त</span></h3>
@@ -483,6 +499,12 @@
   </footer>
 
   <script src="/frontend/static/app.js"></script>
+  <!-- Grouped LFHD formatter + device-presets datalist. Pure
+       presentation layer over the existing device entry table;
+       reads the DOM via event delegation, never modifies app.js
+       state, never alters the LFHD calculation. Loads after app.js
+       so its MutationObserver picks up rows app.js has rendered. -->
+  <script src="/frontend/static/lfhd_grouper.js"></script>
   <!-- Mobile UX progressive enhancement (hamburger, sticky actions,
        table-as-cards). Loads after app.js, never modifies its state. -->
   <script src="/frontend/static/mobile.js"></script>
