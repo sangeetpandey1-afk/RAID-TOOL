@@ -1,0 +1,371 @@
+/* ==================================================================
+   Raid Management System — mobile-responsive overrides (ADDITIVE)
+   ------------------------------------------------------------------
+   Loaded AFTER styles.css. All rules are scoped under either:
+     - @media (max-width: 768px)        : phones
+     - @media (min-width: 769px) and (max-width: 1024px) : tablets
+     - or .nav-open / [data-mode="..."] runtime classes
+   Desktop (>=1025px) is INTENTIONALLY NOT TOUCHED. The existing
+   styles.css remains the single source of truth above 1024px.
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   1. HAMBURGER BUTTON — injected by mobile.js into .topbar
+   ------------------------------------------------------------------ */
+.hamburger {
+  display: none;                    /* hidden on desktop */
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 44px;                      /* WCAG 2.5.5 min touch target */
+  height: 44px;
+  border-radius: 6px;
+  margin-right: 10px;
+  cursor: pointer;
+  padding: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+}
+.hamburger:active { background: rgba(255, 255, 255, 0.25); }
+.hamburger .bar {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: white;
+  margin: 4px auto;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+body.nav-open .hamburger .bar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+body.nav-open .hamburger .bar:nth-child(2) {
+  opacity: 0;
+}
+body.nav-open .hamburger .bar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Backdrop when nav is open on mobile */
+.nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 80;
+}
+body.nav-open .nav-backdrop { display: block; }
+
+/* ==================================================================
+   2. TABLET (769–1024px) — gentle adjustments
+   ================================================================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .content { padding: 14px; }
+  .topbar { padding: 10px 14px; }
+  .brand-hi { font-size: 16px; }
+  .brand-en { font-size: 11px; }
+
+  /* Three-col forms collapse to two-col on tablets */
+  .form-grid.three-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* Larger tap targets without breaking desktop */
+  .btn { padding: 10px 16px; font-size: 14px; }
+  .tab { padding: 14px 18px; font-size: 14px; }
+
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+
+/* ==================================================================
+   3. PHONE (<=768px) — full mobile layout
+   ================================================================== */
+@media (max-width: 768px) {
+
+  /* ---------- 3.1 Topbar / brand ---------- */
+  .topbar {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    row-gap: 6px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+  }
+  .brand { flex: 1 1 auto; min-width: 0; }
+  .brand-hi {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .brand-en { font-size: 10px; }
+  .health {
+    padding: 4px 8px;
+    font-size: 11px;
+    flex: 0 0 auto;
+  }
+  .hamburger { display: inline-flex; }
+
+  /* ---------- 3.2 Tabs become slide-down drawer ---------- */
+  .tabs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 78%;
+    max-width: 320px;
+    height: 100vh;
+    flex-direction: column;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+    padding: 60px 0 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease-out;
+    z-index: 100;
+  }
+  body.nav-open .tabs { transform: translateX(0); }
+  .tab {
+    width: 100%;
+    text-align: left;
+    padding: 14px 20px;
+    font-size: 15px;
+    border-bottom: 1px solid var(--border) !important;
+    border-left: 3px solid transparent;
+    min-height: 48px;                 /* tap target */
+  }
+  .tab.active {
+    border-bottom-color: var(--border) !important;
+    border-left-color: var(--primary);
+    background: #eef2f8;
+  }
+
+  /* ---------- 3.3 Content / typography ---------- */
+  .content { padding: 12px 12px 96px; } /* 96px bottom = clearance for sticky action bar */
+  h2 { font-size: 16px; margin-bottom: 10px; }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+
+  /* ---------- 3.4 KPI cards: 2 columns on phone ---------- */
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .kpi { padding: 10px 12px; }
+  .kpi-value { font-size: 18px; }
+  .kpi-label { font-size: 11px; }
+
+  /* ---------- 3.5 Forms: single column + larger inputs ---------- */
+  /* (existing styles.css already does 1fr at <=800px — we just enlarge) */
+  .form-grid { gap: 10px; }
+  .form-grid > div { gap: 12px; }
+  label { font-size: 12px; }
+  input,
+  select,
+  textarea {
+    padding: 10px 12px;
+    font-size: 16px;                 /* iOS won't zoom on focus when >=16px */
+    min-height: 44px;
+  }
+  input[type="checkbox"] { min-height: 0; }
+  label.indent { margin-left: 12px; padding-left: 8px; }
+
+  /* Camera / photo upload friendliness — applies to any future
+     <input type="file" accept="image/*"> the team adds. Purely additive. */
+  input[type="file"] {
+    padding: 10px;
+    font-size: 14px;
+    background: #f9fafb;
+    border-style: dashed;
+    min-height: 56px;
+  }
+  /* Make the implicit "Choose file" button a real tap target */
+  input[type="file"]::-webkit-file-upload-button {
+    background: var(--primary);
+    color: white;
+    border: 0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-right: 10px;
+    font-size: 14px;
+    min-height: 36px;
+  }
+
+  /* ---------- 3.6 Buttons: full-width-ish + large tap target ---------- */
+  .btn {
+    padding: 11px 16px;
+    font-size: 14px;
+    min-height: 44px;
+    flex: 1 1 auto;                  /* grow inside .actions-row */
+  }
+  .btn.small { min-height: 32px; flex: 0 0 auto; padding: 6px 10px; }
+  .actions-row { gap: 8px; }
+  .actions-row input { flex: 1 1 100%; min-width: 0; }
+
+  /* ---------- 3.7 Sticky action bar inside long panels (New Case) ---------- */
+  /* The "Save Case / Generate All Notices / Live Calculate" actions-row
+     gets stuck to viewport bottom on mobile so the user never has to
+     scroll back up. We target the actions-row that contains save-case. */
+  .actions-row.sticky-mobile {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    margin: 14px -12px 0;             /* extend to viewport edges */
+    z-index: 50;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+  }
+
+  /* ---------- 3.8 Search/filter rows ---------- */
+  .cases-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .cases-toolbar .btn { width: 100%; }
+  .cases-toolbar input { width: 100%; }
+  .cases-count { text-align: right; }
+  .cases-legend { font-size: 11px; gap: 10px; }
+
+  /* ---------- 3.9 Table — proper scrolling with edge hint ---------- */
+  .scroll-x {
+    -webkit-overflow-scrolling: touch;
+    /* Right-edge gradient hint that more content is scrollable */
+    background:
+      linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0)),
+      linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0)),
+      linear-gradient(to right, rgba(0,0,0,0.08), rgba(0,0,0,0)),
+      linear-gradient(to left,  rgba(0,0,0,0.08), rgba(0,0,0,0));
+    background-position: 0 0, 100% 0, 0 0, 100% 0;
+    background-repeat: no-repeat;
+    background-size: 14px 100%, 14px 100%, 8px 100%, 8px 100%;
+    background-attachment: local, local, scroll, scroll;
+    border-radius: 6px;
+  }
+  .data-table { font-size: 12px; }
+  .data-table thead th { padding: 8px 8px; font-size: 12px; }
+  .data-table tbody td { padding: 8px 8px; }
+  .data-table .actions-col .btn {
+    margin-right: 2px;
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 32px;
+  }
+
+  /* ---------- 3.10 RAID MASTER on mobile — card-style rows ----------
+     Triggered when JS marks the table with .table-cards (only on phones).
+     Each <tr> becomes a card; each <td> becomes a labelled row using
+     data-label injected by mobile.js (since CSS can't read <th> text). */
+  .data-table.table-cards,
+  .data-table.table-cards thead,
+  .data-table.table-cards tbody,
+  .data-table.table-cards tr,
+  .data-table.table-cards th,
+  .data-table.table-cards td {
+    display: block;
+    width: auto;
+  }
+  .data-table.table-cards { border: 0; background: transparent; }
+  .data-table.table-cards thead { display: none; }   /* hide header row */
+  .data-table.table-cards tbody tr {
+    background: var(--surface) !important;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    box-shadow: var(--shadow);
+  }
+  .data-table.table-cards tbody tr:nth-child(even) {
+    background: var(--surface) !important;
+  }
+  /* Preserve the row-color tint on cards */
+  .data-table.table-cards tbody tr.row-green  { border-left-color: #16a34a; background: #ecfdf5 !important; }
+  .data-table.table-cards tbody tr.row-yellow { border-left-color: #ca8a04; background: #fefce8 !important; }
+  .data-table.table-cards tbody tr.row-red    { border-left-color: #b91c1c; background: #fef2f2 !important; }
+  .data-table.table-cards tbody tr.row-blue   { border-left-color: #2563eb; background: #eff6ff !important; }
+
+  .data-table.table-cards tbody td {
+    border: 0;
+    border-top: 1px dashed #eef0f4;
+    padding: 6px 0;
+    text-align: left;
+    white-space: normal;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .data-table.table-cards tbody tr td:first-child { border-top: 0; }
+  .data-table.table-cards tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 40%;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding-top: 2px;
+  }
+  .data-table.table-cards tbody td.actions-col {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding-top: 8px;
+  }
+  .data-table.table-cards tbody td.actions-col::before { display: none; }
+  .data-table.table-cards tbody td.actions-col .btn {
+    width: 100%;
+    margin: 0;
+    text-align: center;
+  }
+  .data-table.table-cards .num { text-align: right; }
+
+  /* ---------- 3.11 Detail / cards ---------- */
+  .detail-grid { grid-template-columns: 1fr; gap: 4px 0; }
+  .doc-toolbar-row { padding: 6px; }
+  .doc-toolbar-row .btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+  .stage-panel { gap: 6px; padding: 6px 8px; }
+  .stage-panel .tick { font-size: 11px; padding: 3px 8px; }
+
+  /* ---------- 3.12 Footer ---------- */
+  .footer {
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+    padding: 12px 12px 18px;
+  }
+
+  /* ---------- 3.13 Toast positioning ---------- */
+  .toast {
+    bottom: 76px;                   /* clear of sticky action bar */
+    left: 12px;
+    right: 12px;
+    max-width: none;
+  }
+}
+
+/* ==================================================================
+   4. VERY NARROW PHONES (<=380px) — ultra-compact
+   ================================================================== */
+@media (max-width: 380px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .brand-en { display: none; }
+  .doc-toolbar-row .btn { flex: 1 1 100%; }
+}
+
+/* ==================================================================
+   5. PRINT — make sure mobile drawer doesn't show in printed output
+   ================================================================== */
+@media print {
+  .hamburger,
+  .nav-backdrop { display: none !important; }
+  body.nav-open .tabs { transform: none; }
+}
