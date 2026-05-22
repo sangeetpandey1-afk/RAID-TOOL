@@ -168,6 +168,11 @@ def build_context(case: dict, consumer: dict | None,
 
         # ---- Calculation summary (consumer copy)
         "CONNECTED_LOAD":     cons.get("load_value") or case.get("connected_load_kw") or "",
+        # Total Connected Load — auto-summed from devices in the UI,
+        # operator-overridable. Distinct from CONNECTED_LOAD which is
+        # the contracted/sanctioned load on the meter.
+        "TOTAL_CONNECTED_LOAD": case.get("total_connected_load_kw") or "",
+        "total_connected_load_kw": case.get("total_connected_load_kw") or "",
         "FIXED_RATE":         _money(fixed.get("fixed_rate")),
         "MONTHS":             fixed.get("months") or a.get("months") or "",
         "FIXED_AMOUNT":       _money(fixed.get("base")),

@@ -172,6 +172,7 @@ CREATE TABLE IF NOT EXISTS raid_cases (
     compounding_amount REAL,
     fir_number         TEXT,
     checking_report_number TEXT,             -- Inspection / "Checking Report" reference
+    total_connected_load_kw REAL,            -- Auto-summed from devices (kW); manually editable
     case_status        TEXT DEFAULT 'open',  -- open|noticed|paid|closed|appealed
     created_by         TEXT,
     created_at         TEXT DEFAULT (datetime('now')),

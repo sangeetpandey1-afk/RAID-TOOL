@@ -40,6 +40,9 @@ const STATE = {
   devices: [],
   documentKinds: [],
   noticeBundle: [],
+  // True after the operator manually edits #f_total_connected_load.
+  // While false, that field auto-syncs to the sum of device loads.
+  totalLoadOverridden: false,
 };
 
 // ============================================================ toast
@@ -190,6 +193,7 @@ function devicesAddRow(d) {
   const row = d || { name: "", load: "", factor: 1, hours: "", days: 365, units: "" };
   STATE.devices.push(row);
   renderDevices();
+  recomputeTotalConnectedLoad();
 }
 
 function renderDevices() {
@@ -214,13 +218,67 @@ $("#devicesBody").addEventListener("input", (e) => {
   const fld = e.target.dataset.field;
   if (!fld) return;
   STATE.devices[idx][fld] = e.target.value;
+  if (fld === "load") recomputeTotalConnectedLoad();
 });
 $("#devicesBody").addEventListener("click", (e) => {
   if (e.target.dataset.remove !== undefined) {
     STATE.devices.splice(Number(e.target.dataset.remove), 1);
     renderDevices();
+    recomputeTotalConnectedLoad();
   }
 });
+
+// ---------------------------------------------------------------- Total Connected Load
+//
+// Auto-sums the device loads (in Watts) into the #f_total_connected_load
+// field (in kW), unless the operator has manually edited that field.
+// Manual edits set STATE.totalLoadOverridden = true; clicking the small
+// "Auto" badge under the field clears the override and re-syncs.
+//
+// The existing connected_load_kw (Contracted Load) is NOT touched.
+function sumDeviceLoadsKW() {
+  const totalW = STATE.devices.reduce(
+    (sum, d) => sum + (Number(d.load) || 0), 0);
+  return totalW / 1000.0;
+}
+
+function recomputeTotalConnectedLoad() {
+  const inp = $("#f_total_connected_load");
+  if (!inp) return;
+  if (STATE.totalLoadOverridden) {
+    // Just update the hint text but don't overwrite the value
+    const hint = $("#totalLoadHint");
+    if (hint) hint.textContent = "manually overridden · click to reset auto";
+    return;
+  }
+  const kw = sumDeviceLoadsKW();
+  inp.value = kw > 0 ? Number(kw.toFixed(3)) : "";
+  const hint = $("#totalLoadHint");
+  if (hint) hint.textContent = `auto · ${STATE.devices.length} device(s) · ${kw.toFixed(3)} kW`;
+}
+
+function setupTotalConnectedLoad() {
+  const inp = $("#f_total_connected_load");
+  if (!inp) return;
+  // Mark as overridden when the user types in the field directly
+  inp.addEventListener("input", () => {
+    STATE.totalLoadOverridden = true;
+    const hint = $("#totalLoadHint");
+    if (hint) hint.textContent = "manually overridden · click hint to reset auto";
+  });
+  // Clicking the hint clears the override and re-syncs
+  const hint = $("#totalLoadHint");
+  if (hint) {
+    hint.style.cursor = "pointer";
+    hint.title = "Click to reset to auto-sum";
+    hint.addEventListener("click", () => {
+      STATE.totalLoadOverridden = false;
+      recomputeTotalConnectedLoad();
+      toast("Total Connected Load reset to auto", "ok");
+    });
+  }
+  recomputeTotalConnectedLoad();
+}
 
 function collectDevicesFromUI() {
   $$("#devicesBody tr").forEach(tr => {
@@ -289,6 +347,7 @@ function buildCaseRequest() {
     inspection_date:   $("#f_inspection").value || null,
     td_date:           $("#f_td_date").value || null,
     connected_load_kw: num("#f_load") || 0,
+    total_connected_load_kw: num("#f_total_connected_load"),
     less_unit:         num("#f_less_unit"),
     multiplier:        num("#f_multiplier"),
     je_name:           $("#f_je").value.trim(),
@@ -480,6 +539,17 @@ async function refreshCases() {
             <span class="small">${escapeHtml(c.inspection_date || "")}</span>
             ${c.checking_report_number
                 ? `<br/><span class="small" title="Checking Report Number">CR: <code>${escapeHtml(c.checking_report_number)}</code></span>`
+                : ""}
+            ${(c.total_connected_load_kw || c.connected_load_kw)
+                ? `<br/><span class="small" title="Total Connected Load · Contracted Load">Load: ${
+                      c.total_connected_load_kw
+                        ? Number(c.total_connected_load_kw).toFixed(3) + " kW"
+                        : "—"
+                  } / ${
+                      c.connected_load_kw
+                        ? Number(c.connected_load_kw).toFixed(3) + " kW"
+                        : "—"
+                  }</span>`
                 : ""}</td>
         <td class="num">${fmtMoney(c.total_assessment)}<br/>
             <span class="small">+ ${fmtMoney(c.compounding_amount || 0)}</span></td>
@@ -546,6 +616,17 @@ async function loadCase(cid) {
            ${c.td_date ? ` · TD: ${escapeHtml(c.td_date)}` : ""}</div>
       ${c.checking_report_number
           ? `<div>Checking Report No.: <b>${escapeHtml(c.checking_report_number)}</b></div>`
+          : ""}
+      ${(c.total_connected_load_kw || c.connected_load_kw)
+          ? `<div>Load — Total Connected: <b>${
+              c.total_connected_load_kw
+                ? Number(c.total_connected_load_kw).toFixed(3) + " kW"
+                : "—"
+            }</b> · Contracted: <b>${
+              c.connected_load_kw
+                ? Number(c.connected_load_kw).toFixed(3) + " kW"
+                : "—"
+            }</b></div>`
           : ""}
       <div>Assessment: ₹ <b>${fmtMoney(c.total_assessment)}</b> · Compounding: ₹ ${fmtMoney(c.compounding_amount)}</div>
       <div>J.E.: ${escapeHtml(c.je_name || "")} · Sub-station: ${escapeHtml(c.sub_substation || "")}</div>
@@ -870,6 +951,7 @@ document.addEventListener("click", (e) => {
         { name: "AC 1.5 Ton",   load: 1800, factor: 1, hours: 4,  days: 120, units: "" },
       ];
       renderDevices();
+      recomputeTotalConnectedLoad();
       break;
     case "live-calc":         liveCalc(); break;
     case "save-case":         saveCase(); break;
@@ -929,6 +1011,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   // Section 2 — User Found at Premises autofill checkboxes
   setupUserAutofillCheckboxes();
+
+  // Section 3 — Total Connected Load (auto-sum from devices, override-aware)
+  setupTotalConnectedLoad();
 
   setInterval(refreshHealth, 30000);
 });

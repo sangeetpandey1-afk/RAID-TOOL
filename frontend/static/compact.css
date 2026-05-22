@@ -313,3 +313,29 @@
   /* leave room below the form so the sticky bar never hides content */
   #panel-new-case { padding-bottom: 60px; }
 }
+
+
+
+/* ==================================================================
+   7. TOTAL CONNECTED LOAD — small auto/override hint
+   ------------------------------------------------------------------
+   Tiny badge under #f_total_connected_load that shows either
+   "auto · N device(s) · X.XXX kW" while syncing, or
+   "manually overridden · click to reset auto" after edit.
+   Click on the hint clears the override flag.
+   ================================================================== */
+.auto-hint {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 10.5px;
+  border: 1px solid #a7f3d0;
+  user-select: none;
+}
+.auto-hint:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
