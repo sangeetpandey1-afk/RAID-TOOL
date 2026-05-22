@@ -245,6 +245,26 @@ function buildCaseRequest() {
     const v = $(id).value;
     return v === "" ? null : Number(v);
   };
+  // ---- User-side fields beyond user_name/user_father/user_address ----
+  // The backend currently persists only those three columns, so we pack the
+  // newer user-detail fields into a `user_extra` JSON object on the payload.
+  // Unknown keys are silently ignored by the existing /api/cases handler;
+  // this lets us surface the richer user form today without any backend
+  // change. Whenever the team is ready to persist these, that's a single
+  // additive ALTER TABLE following the same lightweight-migration pattern
+  // already used for `checking_report_number`.
+  const userExtra = {
+    relation:  $("#f_user_relation").value,
+    mobile:    $("#f_user_mobile").value.trim(),
+    landmark:  $("#f_user_landmark").value.trim(),
+    village:   $("#f_user_village").value.trim(),
+    post_office: $("#f_user_post").value.trim(),
+    pin_code:  $("#f_user_pin").value.trim(),
+    tehsil:    $("#f_user_tehsil").value.trim(),
+    district:  $("#f_user_district").value.trim(),
+    consumer_user_same: $("#chk_user_same").checked,
+    address_same:       $("#chk_addr_same").checked,
+  };
   return {
     account_number:    $("#f_account").value.trim(),
     online_no:         $("#f_online_no").value.trim(),
@@ -261,6 +281,7 @@ function buildCaseRequest() {
     mobile:            $("#f_mobile").value.trim(),
     category:          $("#f_category").value,
     supply_type:       $("#f_supply").value,
+    process_type:      $("#f_process_type").value,  // new field, ignored by backend for now
     connection_status: $("#f_conn_status").value,
 
     section:           $("#f_section").value,
@@ -279,6 +300,7 @@ function buildCaseRequest() {
     user_name:         $("#f_user_name").value.trim(),
     user_father:       $("#f_user_father").value.trim(),
     user_address:      $("#f_user_address").value.trim(),
+    user_extra:        userExtra,
 
     devices:           collectDevicesFromUI(),
     calculate_compounding: $("#chk_compounding").checked,
@@ -311,7 +333,7 @@ async function lookupConsumer() {
   setIf("#f_div_code",    c.div_code);
   setIf("#f_mobile",      c.mobile);
   setIf("#f_substation",  c.sub_substation);
-  if (c.category)    $("#f_category").value = c.category;
+  if (c.category)    ensureCategoryOption(c.category);
   if (c.supply_type) $("#f_supply").value   = c.supply_type;
   if (!$("#f_load").value && c.load_value) $("#f_load").value = c.load_value;
   toast(`Loaded: ${c.name || acct}`, "ok");
@@ -733,7 +755,103 @@ async function refreshReports() {
     </tr>`).join("") || `<tr><td colspan="4" style="text-align:center;color:var(--muted)">No reports yet.</td></tr>`;
 }
 
-// ============================================================ central click router
+// ============================================================ Section 2 — User Found at Premises
+//
+// Two checkbox helpers that autofill the user-side fields from the
+// consumer-side fields. The fields remain fully editable afterwards
+// (per spec: "Do NOT remove manual editing ability"). Operators can
+// uncheck-then-recheck to re-sync.
+
+function copyConsumerToUser() {
+  // Copies name + father + mobile, sets relation = Self.
+  const setVal = (id, v) => { if (v !== undefined && v !== null) $(id).value = v; };
+  setVal("#f_user_name",   $("#f_name").value.trim());
+  setVal("#f_user_father", $("#f_father").value.trim());
+  setVal("#f_user_mobile", $("#f_mobile").value.trim());
+  $("#f_user_relation").value = "Self";
+}
+
+function copyConsumerAddressToUser() {
+  // Copies the address block. Address text comes from #f_address;
+  // the rest (landmark / village / post / pin / tehsil / district) are
+  // mirrored field-for-field.
+  const pairs = [
+    ["#f_address",  "#f_user_address"],
+    ["#f_landmark", "#f_user_landmark"],
+    ["#f_village",  "#f_user_village"],
+    ["#f_post",     "#f_user_post"],
+    ["#f_pin",      "#f_user_pin"],
+    ["#f_tehsil",   "#f_user_tehsil"],
+    ["#f_district", "#f_user_district"],
+  ];
+  pairs.forEach(([from, to]) => { $(to).value = $(from).value; });
+}
+
+function setupUserAutofillCheckboxes() {
+  const same = $("#chk_user_same");
+  const addr = $("#chk_addr_same");
+  if (same) {
+    same.addEventListener("change", () => {
+      if (same.checked) {
+        copyConsumerToUser();
+        toast("User auto-filled from consumer (Self)", "ok");
+      }
+    });
+  }
+  if (addr) {
+    addr.addEventListener("change", () => {
+      if (addr.checked) {
+        copyConsumerAddressToUser();
+        toast("User address auto-filled from consumer", "ok");
+      }
+    });
+  }
+}
+
+// If a saved case has a Category value not in the new short dropdown
+// (e.g. legacy LMV-3/4/6/7/8/9), inject a temporary <option> so the
+// value displays correctly without data loss. Idempotent.
+function ensureCategoryOption(value) {
+  if (!value) return;
+  const sel = $("#f_category");
+  if (!sel) return;
+  const has = Array.from(sel.options).some(o => o.value === value || o.text === value);
+  if (!has) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = value + " (legacy)";
+    sel.appendChild(opt);
+  }
+  sel.value = value;
+}
+
+// ============================================================ Section 6 — Print / Export PDF
+//
+// "Print" and "Export PDF" both reuse the existing notice preview path,
+// which already has print-optimised CSS in templates/html/_layout.html.
+// No new backend route needed. We default to the consumer-copy provisional
+// notice because that's the fullest one-page summary of a case. From the
+// preview window the operator can hit Ctrl+P (or "Save as PDF") for a
+// real PDF — the toolbar in _layout.html already exposes a Print button.
+
+function printCurrentCase(/* preferPdf */ preferPdf = false) {
+  const cid = STATE.currentCaseId;
+  if (!cid) {
+    toast("Save the case first, then Print / Export PDF", "error");
+    return;
+  }
+  const url = `/api/cases/${encodeURIComponent(cid)}/document/provisional_consumer/preview`;
+  const win = window.open(url, "_blank", "noopener");
+  if (!win) {
+    toast("Popup blocked — allow popups for this site", "error");
+    return;
+  }
+  toast(preferPdf
+        ? "Preview opened — use Ctrl+P → 'Save as PDF'"
+        : "Preview opened — use the Print button", "ok");
+}
+
+
 document.addEventListener("click", (e) => {
   const action = e.target.dataset.action;
   if (!action) return;
@@ -758,6 +876,8 @@ document.addEventListener("click", (e) => {
     case "offense-check":     offenseCheckActive(); break;
     case "generate-all-docs": generateAllForCurrent(); break;
     case "gen-all-current":   generateAllForCurrent(); break;
+    case "print-case":        printCurrentCase(false); break;
+    case "export-pdf":        printCurrentCase(true);  break;
 
     case "refresh-cases":     refreshCases(); break;
     case "record-payment":    recordPayment(); break;
@@ -806,6 +926,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     chk.addEventListener("change", apply);
     apply();   // initial state
   });
+
+  // Section 2 — User Found at Premises autofill checkboxes
+  setupUserAutofillCheckboxes();
 
   setInterval(refreshHealth, 30000);
 });

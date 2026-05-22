@@ -69,124 +69,185 @@
     <section class="panel" id="panel-new-case">
       <h2>New Case</h2>
 
-      <h3>उपभोक्ता विवरण / Consumer (Registered)</h3>
+      <!-- ========== SECTION 1 — BASIC RAID DETAILS ========== -->
+      <h3 class="sec-title"><span class="sec-num">1</span> Basic Raid Details
+        <span class="small">मूलभूत विवरण</span></h3>
       <div class="form-grid two-col dense">
         <div>
-          <label>Account No. <input id="f_account" type="text" /></label>
-          <label>Online No. <input id="f_online_no" type="text" /></label>
-          <label>Name (नाम) <input id="f_name" type="text" lang="hi" /></label>
-          <label>Father / पिता <input id="f_father" type="text" lang="hi" /></label>
-          <label>Mobile <input id="f_mobile" type="text" /></label>
+          <label>Division No <input id="f_div_code" type="text" /></label>
+          <label>Checking Report Number
+            <input id="f_checking_report_number" type="text"
+                   placeholder="e.g. CR-2026-001" />
+          </label>
+          <label>Checking Date <input id="f_inspection" type="date" /></label>
+          <label>JE Name <input id="f_je" type="text" /></label>
+          <label>Account Number
+            <input id="f_account" type="text"
+                   placeholder="leave blank for direct theft (no account)" />
+          </label>
+          <label>Consumer Name (नाम)
+            <input id="f_name" type="text" lang="hi" />
+          </label>
+        </div>
+        <div>
+          <label>Village (गाँव) <input id="f_village" type="text" lang="hi" /></label>
+          <label>Landmark (लैंडमार्क) <input id="f_landmark" type="text" lang="hi" /></label>
+          <label>Post Office (पोस्ट) <input id="f_post" type="text" lang="hi" /></label>
+          <label>Tehsil (तहसील) <input id="f_tehsil" type="text" lang="hi" /></label>
+          <label>Pin Code <input id="f_pin" type="text" /></label>
+          <label>District (जनपद) <input id="f_district" type="text" lang="hi" /></label>
+        </div>
+      </div>
+
+      <!-- Secondary / less-frequent consumer details — kept editable but
+           visually muted so they don't crowd the primary 12 fields above.
+           Online Number lives here per spec ("can stay editable but should
+           appear later/secondary"). Father / Mobile / Address are needed
+           by existing notice templates (USERS_FATHER etc.) so they remain. -->
+      <details class="secondary-details" open>
+        <summary>Secondary details (Online No., Father, Mobile, Address)</summary>
+        <div class="form-grid two-col dense">
+          <div>
+            <label>Online No. <input id="f_online_no" type="text" /></label>
+            <label>Father / पिता
+              <input id="f_father" type="text" lang="hi" />
+            </label>
+            <label>Mobile <input id="f_mobile" type="text" /></label>
+          </div>
+          <div>
+            <label>Address (पता)
+              <input id="f_address" type="text" lang="hi" />
+            </label>
+            <label>Sub-Substation <input id="f_substation" type="text" /></label>
+            <label>Checking Type
+              <select id="f_checking">
+                <option>Vigilance</option><option>Routine</option><option>Special</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </details>
+
+      <!-- ========== SECTION 2 — USER FOUND AT PREMISES ========== -->
+      <h3 class="sec-title"><span class="sec-num">2</span> User Found at Premises
+        <span class="small">परिसर पर मिला व्यक्ति</span></h3>
+      <p class="small section-note">
+        अगर निरीक्षण के समय परिसर पर कोई और व्यक्ति मिला (जैसे किरायेदार)
+        तो उसका विवरण भरें। नोटिसों में «USER_NAME» / «USERS_FATHER» के
+        रूप में आएगा।
+      </p>
+
+      <div class="user-flags">
+        <label class="check-row">
+          <input type="checkbox" id="chk_user_same" />
+          <b>Consumer and User same</b>
+          <span class="small">(auto-fill name, father, mobile · relation = Self)</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="chk_addr_same" />
+          <b>User address same as consumer</b>
+          <span class="small">(auto-fill address, village, landmark, post, pin, tehsil, district)</span>
+        </label>
+      </div>
+
+      <div class="form-grid two-col dense">
+        <div>
+          <label>User Name (नाम)
+            <input id="f_user_name" type="text" lang="hi" />
+          </label>
+          <label>User's Father (पिता)
+            <input id="f_user_father" type="text" lang="hi" />
+          </label>
+          <label>Relation With Consumer
+            <select id="f_user_relation">
+              <option value="">— select —</option>
+              <option>Self</option>
+              <option>Son</option>
+              <option>Wife</option>
+              <option>Father</option>
+              <option>Brother</option>
+              <option>Tenant</option>
+              <option>Employee</option>
+              <option>Relative</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Mobile <input id="f_user_mobile" type="text" /></label>
+          <label>Address (पता)
+            <input id="f_user_address" type="text" lang="hi" />
+          </label>
+        </div>
+        <div>
+          <label>Landmark (लैंडमार्क)
+            <input id="f_user_landmark" type="text" lang="hi" />
+          </label>
+          <label>Village (गाँव)
+            <input id="f_user_village" type="text" lang="hi" />
+          </label>
+          <label>Post Office (पोस्ट)
+            <input id="f_user_post" type="text" lang="hi" />
+          </label>
+          <label>Tehsil (तहसील)
+            <input id="f_user_tehsil" type="text" lang="hi" />
+          </label>
+          <label>Pin Code <input id="f_user_pin" type="text" /></label>
+          <label>District (जनपद)
+            <input id="f_user_district" type="text" lang="hi" />
+          </label>
+        </div>
+      </div>
+
+      <!-- ========== SECTION 3 — CONNECTION DETAILS ========== -->
+      <h3 class="sec-title"><span class="sec-num">3</span> Connection Details
+        <span class="small">कनेक्शन विवरण</span></h3>
+      <div class="form-grid two-col dense">
+        <div>
           <label>Category
             <select id="f_category">
-              <option>LMV-1</option><option>LMV-2</option><option>LMV-3</option>
-              <option>LMV-4</option><option>LMV-5</option><option>LMV-6</option>
-              <option>LMV-7</option><option>LMV-8</option><option>LMV-9</option>
+              <option>LMV-1</option>
+              <option>LMV-2</option>
+              <option>LMV-5</option>
+              <option>HV</option>
+              <option>Agriculture</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Process / Usage Type
+            <select id="f_process_type">
+              <option value="">— select —</option>
+              <option>Domestic / Gharelu</option>
+              <option>Commercial</option>
+              <option>Agriculture</option>
+              <option>Industrial</option>
+              <option>Other</option>
             </select>
           </label>
           <label>Supply Type
             <select id="f_supply">
-              <option>Domestic</option><option>Commercial</option>
-              <option>Industrial</option><option>Agricultural</option>
+              <option>Domestic</option>
+              <option>Commercial</option>
+              <option>Industrial</option>
+              <option>Agricultural</option>
             </select>
           </label>
+        </div>
+        <div>
           <label>Connection Status
             <select id="f_conn_status">
-              <option>Active</option><option>Disconnected</option>
+              <option>Active</option>
+              <option>Disconnected</option>
               <option>Permanently Disconnected</option>
             </select>
           </label>
-        </div>
-        <div>
-          <label>Address (पता) <input id="f_address" type="text" lang="hi" /></label>
-          <label>Landmark (लैंडमार्क) <input id="f_landmark" type="text" lang="hi" /></label>
-          <label>Village (गाँव) <input id="f_village" type="text" lang="hi" /></label>
-          <label>Post Office (पोस्ट) <input id="f_post" type="text" lang="hi" /></label>
-          <label>Pin Code <input id="f_pin" type="text" /></label>
-          <label>Tehsil (तहसील) <input id="f_tehsil" type="text" lang="hi" /></label>
-          <label>District (जनपद) <input id="f_district" type="text" lang="hi" /></label>
-          <label>Division Code <input id="f_div_code" type="text" /></label>
+          <label>Contracted Load (kW)
+            <input id="f_load" type="number" step="0.001" />
+          </label>
         </div>
       </div>
 
-      <h3>निरीक्षण विवरण / Raid Header</h3>
-      <div class="form-grid two-col dense">
-        <div>
-          <label>Section
-            <select id="f_section">
-              <option value="135">135 (Theft)</option>
-              <option value="138">138 (TD)</option>
-              <option value="126">126 (UUE)</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-          <label>Section (Other text) <input id="f_section_other" type="text" /></label>
-          <label>Inspection Date <input id="f_inspection" type="date" /></label>
-          <label>Checking Report No.
-            <input id="f_checking_report_number" type="text"
-                   placeholder="e.g. CR-2026-001" />
-          </label>
-
-          <label class="check-row">
-            <input type="checkbox" id="chk_td_date" data-gate="f_td_date" />
-            TD Date applicable (Sec 138)
-          </label>
-          <label class="indent">TD Date <input id="f_td_date" type="date" /></label>
-
-          <label>Connected Load (kW) <input id="f_load" type="number" step="0.001" /></label>
-
-          <label class="check-row">
-            <input type="checkbox" id="chk_less_unit" data-gate="f_less_unit" />
-            Less Unit adjustment applicable
-            <span class="small">(subtract one year of consumed units)</span>
-          </label>
-          <label class="indent">Less Unit (kWh) <input id="f_less_unit" type="number" step="0.01" /></label>
-        </div>
-        <div>
-          <label>J.E. Name <input id="f_je" type="text" /></label>
-          <label>Sub-Substation <input id="f_substation" type="text" /></label>
-          <label>Checking Type
-            <select id="f_checking">
-              <option>Vigilance</option><option>Routine</option><option>Special</option>
-            </select>
-          </label>
-
-          <label class="check-row">
-            <input type="checkbox" id="chk_fir" data-gate="f_fir" />
-            FIR registered
-          </label>
-          <label class="indent">FIR Number <input id="f_fir" type="text" /></label>
-
-          <label class="check-row">
-            <input type="checkbox" id="chk_compounding" checked />
-            Calculate Section 152 Compounding (per-KW round-up)
-          </label>
-
-          <label class="check-row">
-            <input type="checkbox" id="chk_multiplier" data-gate="f_multiplier" />
-            Override multiplier (default: auto 2× / 6×)
-          </label>
-          <label class="indent">Multiplier <input id="f_multiplier" type="number" step="0.5" /></label>
-        </div>
-      </div>
-
-      <h3>परिसर पर मिला उपभोक्ता / User Found at Premises</h3>
-      <p class="small" style="margin-top:-4px">
-        अगर निरीक्षण के समय परिसर पर कोई और व्यक्ति मिला (जैसे किरायेदार), तो
-        उसका नाम अलग से भरें — नोटिसों में «USER_NAME» / «USERS_FATHER» के रूप में आएगा।
-        Leave blank if same as registered consumer.
-      </p>
-      <div class="form-grid two-col dense">
-        <div>
-          <label>User Name (परिसर पर मिला नाम) <input id="f_user_name" type="text" lang="hi" /></label>
-          <label>User Father (पुत्र / पति) <input id="f_user_father" type="text" lang="hi" /></label>
-        </div>
-        <div>
-          <label>User Address (पता) <input id="f_user_address" type="text" lang="hi" /></label>
-        </div>
-      </div>
-
-      <h3>Devices (LFHD)</h3>
+      <!-- ========== SECTION 4 — DEVICE DETAILS (LFHD) ========== -->
+      <h3 class="sec-title"><span class="sec-num">4</span> Device Details (LFHD)
+        <span class="small">उपकरण विवरण</span></h3>
       <table class="data-table" id="devicesTable">
         <thead>
           <tr>
@@ -198,11 +259,61 @@
       </table>
       <div class="actions-row">
         <button class="btn" data-action="add-device">+ Add Device</button>
-        <button class="btn" data-action="add-sample">+ Sample 3 Devices</button>
+        <button class="btn" data-action="add-sample">+ Sample Devices</button>
         <button class="btn primary" data-action="live-calc">Live Calculate</button>
-        <button class="btn primary" data-action="save-case">Save Case</button>
-        <button class="btn" data-action="offense-check">Offense Check</button>
-        <button class="btn primary" data-action="generate-all-docs">📄 Generate All Notices</button>
+      </div>
+
+      <!-- ========== SECTION 5 — LEGAL / EXTRA ========== -->
+      <h3 class="sec-title"><span class="sec-num">5</span> Legal / Extra
+        <span class="small">कानूनी / अतिरिक्त</span></h3>
+      <div class="form-grid two-col dense">
+        <div>
+          <label>Section
+            <select id="f_section">
+              <option value="135">135 (Theft)</option>
+              <option value="138">138 (TD)</option>
+              <option value="126">126 (UUE)</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+          <label>Section (Other text) <input id="f_section_other" type="text" /></label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_fir" data-gate="f_fir" />
+            FIR Registered
+          </label>
+          <label class="indent">FIR Number <input id="f_fir" type="text" /></label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_td_date" data-gate="f_td_date" />
+            TD Applicable (Sec 138)
+          </label>
+          <label class="indent">TD Date <input id="f_td_date" type="date" /></label>
+        </div>
+        <div>
+          <label class="check-row">
+            <input type="checkbox" id="chk_less_unit" data-gate="f_less_unit" />
+            Less Unit Applicable
+            <span class="small">(subtract one year of consumed units)</span>
+          </label>
+          <label class="indent">Less Unit (kWh)
+            <input id="f_less_unit" type="number" step="0.01" />
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_compounding" checked />
+            Section 152 Compounding (per-KW round-up)
+          </label>
+
+          <label class="check-row">
+            <input type="checkbox" id="chk_multiplier" data-gate="f_multiplier" />
+            Multiplier Override
+            <span class="small">(default auto 2× / 6×)</span>
+          </label>
+          <label class="indent">Multiplier
+            <input id="f_multiplier" type="number" step="0.5" />
+          </label>
+        </div>
       </div>
 
       <h3>Calculation Result</h3>
@@ -210,6 +321,18 @@
 
       <h3>Saved Case</h3>
       <div class="card" id="savedCase">No case saved yet.</div>
+
+      <!-- ========== SECTION 6 — STICKY ACTION BAR ========== -->
+      <!-- The .sticky-mobile class is recognised by mobile.js (PR #7).
+           On desktop we add .sticky-desktop so it sticks to viewport
+           bottom there too — pure CSS in compact.css, no JS change. -->
+      <div class="actions-row sticky-mobile sticky-desktop" id="caseActionBar">
+        <button class="btn primary"  data-action="save-case">💾 Save Case</button>
+        <button class="btn primary"  data-action="generate-all-docs">📄 Generate Notices</button>
+        <button class="btn"          data-action="offense-check">⚠ Offense Check</button>
+        <button class="btn"          data-action="print-case">🖨 Print</button>
+        <button class="btn"          data-action="export-pdf">📑 Export PDF</button>
+      </div>
     </section>
 
     <!-- ============================ RAID MASTER ============================ -->

@@ -208,3 +208,108 @@
     transition: none !important;
   }
 }
+
+
+
+/* ==================================================================
+   6. SECTION HEADERS + STICKY DESKTOP ACTION BAR + USER-FLAGS
+   ------------------------------------------------------------------
+   Additions for the 6-section New Case form structure (PR #9).
+   Pure CSS, additive — no existing rule overridden.
+   ================================================================== */
+.sec-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 1.5px solid var(--primary, #305496);
+  padding-bottom: 3px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--primary, #305496);
+}
+.sec-title .sec-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary, #305496);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.sec-title .small {
+  color: var(--muted, #6b7280);
+  font-weight: 400;
+  font-size: 11px;
+}
+.section-note {
+  margin: -2px 0 6px 0;
+  padding: 4px 8px;
+  background: #f9fafb;
+  border-left: 3px solid #94a3b8;
+  border-radius: 0 3px 3px 0;
+  color: var(--muted, #6b7280);
+  font-size: 11px;
+}
+
+/* ----- Secondary details accordion (Online No., Father, Mobile…) ----- */
+.secondary-details {
+  margin: 4px 0 8px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  padding: 4px 8px 6px;
+  background: #f8fafc;
+}
+.secondary-details > summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  padding: 2px 0;
+  user-select: none;
+}
+.secondary-details[open] > summary {
+  margin-bottom: 4px;
+  color: var(--primary, #305496);
+  font-weight: 600;
+}
+
+/* ----- User-flags checkbox row (full-width labels) ----- */
+.user-flags {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin: 4px 0 8px;
+}
+.user-flags .check-row {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* ----- Sticky desktop action bar (mirror of mobile sticky-mobile) -----
+     Mobile (<=768) keeps its sticky-mobile behaviour from mobile.css.
+     Desktop adds .sticky-desktop so the same row sticks to viewport
+     bottom on desktop too — gives operators a permanent action surface
+     without scrolling. */
+@media (min-width: 769px) {
+  .actions-row.sticky-desktop {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    background: var(--surface, #fff);
+    border-top: 1px solid var(--border, #e5e7eb);
+    padding: 8px 12px;
+    margin: 14px -18px 0;       /* extend to content edges */
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  /* leave room below the form so the sticky bar never hides content */
+  #panel-new-case { padding-bottom: 60px; }
+}
