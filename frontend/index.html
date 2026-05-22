@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>विद्युत चोरी रेड प्रबंधन सिस्टम</title>
   <link rel="stylesheet" href="/frontend/static/styles.css" />
+  <!-- Additive mobile-responsive overrides; loaded after styles.css so phone/tablet
+       rules take precedence at <=1024px without altering the desktop UI. -->
+  <link rel="stylesheet" href="/frontend/static/mobile.css" />
 </head>
 <body>
   <header class="topbar">
@@ -344,5 +347,8 @@
   </footer>
 
   <script src="/frontend/static/app.js"></script>
+  <!-- Mobile UX progressive enhancement (hamburger, sticky actions,
+       table-as-cards). Loads after app.js, never modifies its state. -->
+  <script src="/frontend/static/mobile.js"></script>
 </body>
 </html>
