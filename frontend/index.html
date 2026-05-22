@@ -31,6 +31,9 @@
     <button class="tab" data-tab="search">Search</button>
     <button class="tab" data-tab="backup">Backup</button>
     <button class="tab" data-tab="reports">Reports</button>
+    <!-- Imports tab — Historical Offense + Rate Master uploads.
+         Wired by /frontend/static/imports_panel.js (no app.js change). -->
+    <button class="tab" data-tab="imports">Imports</button>
   </nav>
 
   <main class="content">
@@ -155,14 +158,19 @@
             <option>Other</option>
           </select>
         </label>
-        <label>Process / Usage Type
-          <select id="f_process_type">
-            <option value="">— select —</option>
-            <option>Domestic / Gharelu</option>
-            <option>Commercial</option>
-            <option>Agriculture</option>
-            <option>Industrial</option>
-            <option>Other</option>
+        <!--
+          Subcategory replaces the visible "Process / Usage Type" slot
+          in row 5.  The semantic role of that field is now covered by
+          (Category + Subcategory) plus Supply Type, so #f_process_type
+          becomes a hidden input below to preserve app.js's save/load
+          payload contract (it still reads $('#f_process_type').value).
+          The Subcategory dropdown is hydrated by category_supply.js
+          on DOMContentLoaded and on every category change, from the
+          subcategories map declared in tariff_mapping.js.
+        -->
+        <label>Subcategory
+          <select id="f_subcategory">
+            <option value="">— pick category first —</option>
           </select>
         </label>
         <label>Supply Type
@@ -173,6 +181,13 @@
             <option value="">— select category first —</option>
           </select>
         </label>
+
+        <!-- Hidden Process / Usage Type — kept in DOM for app.js
+             save/load round-trip with the existing process_type
+             column. Empty for new cases entered with the new
+             Subcategory model; legacy cases load their value back
+             into the hidden input unchanged. -->
+        <input type="hidden" id="f_process_type" value="" />
 
         <!-- ROW 6 — connection + load (3 cells; col-4 left blank by design) -->
         <label>Connection Status
@@ -198,6 +213,22 @@
              is kept so app.js (#f_address) and the `address` DB column keep
              round-tripping unchanged. -->
         <input type="hidden" id="f_address" />
+      </div>
+
+      <!--
+        Live Tariff Preview card (PR: feat/rate-master-tariff-timeline).
+        Sits between Section 1 and Section 2, populated by
+        /frontend/static/tariff_preview.js, which calls
+        GET /api/rates/preview whenever Category / Subcategory /
+        Supply Type / Load / Inspection Date change.
+        Pure read-only — never alters the LFHD calculation, the
+        Total Connected Load, or the case payload.
+      -->
+      <div class="card tariff-preview-card" id="tariffPreview">
+        <div class="small tariff-empty">
+          Pick a Category (and optionally a Subcategory) to see the
+          applicable tariff for the inspection date.
+        </div>
       </div>
 
       <!-- ========== SECTION 2 — USER FOUND AT PREMISES ========== -->
@@ -469,6 +500,92 @@
       </div>
     </section>
 
+    <!-- ============================ IMPORTS ============================ -->
+    <!--
+      Imports panel (PR: feat/rate-master-tariff-timeline).
+      Two cards:
+        A) Historical Offense Import  -> POST /api/historical/import
+        B) Rate Master Import + grid  -> POST /api/rates/import,
+                                         GET  /api/rates/schedules
+      All wiring is in /frontend/static/imports_panel.js — pure
+      additive layer, never modifies the New Case form, the LFHD
+      grouper, or any save/load flow.
+    -->
+    <section class="panel" id="panel-imports">
+      <h2>Imports</h2>
+
+      <h3 class="sec-title"><span class="sec-num">A</span> Historical Offense Import
+        <span class="small">पुराना ऑफेंस डेटा</span></h3>
+      <p class="small section-note">
+        Upload an old raid/offense workbook (.xlsx / .xls / .csv).
+        Repeat-offense detection uses ONLY the New Account Number;
+        re-uploading the same file is safe (duplicates are skipped).
+      </p>
+      <form class="card imports-form" id="histImportForm">
+        <label class="imports-file-label">
+          Workbook
+          <input type="file" id="histImportFile"
+                 accept=".xlsx,.xls,.xlsm,.csv,.txt" required />
+        </label>
+        <div class="actions-row">
+          <button type="submit" class="btn primary">Upload Historical</button>
+        </div>
+      </form>
+      <div id="histImportSummary"></div>
+
+      <h3 class="sec-title"><span class="sec-num">B</span> Rate Master Import
+        <span class="small">टैरिफ शेड्यूल अपलोड</span></h3>
+      <p class="small section-note">
+        Upload a tariff schedule (e.g. FY2024-25, FY2025-26).
+        Old schedules are NEVER overwritten automatically — the system
+        warns on date overlap and lets you choose Replace, Keep both,
+        or Cancel.  Need a template?
+        <button type="button" id="rateSampleBtn" class="btn small">
+          Download sample
+        </button>
+      </p>
+      <form class="card imports-form" id="rateImportForm">
+        <div class="form-grid two-col dense">
+          <div>
+            <label>Schedule name
+              <input type="text" id="rateImportName"
+                     placeholder="e.g. FY2025-26" required />
+            </label>
+            <label>Effective from
+              <input type="date" id="rateImportFrom" />
+            </label>
+            <label>Effective to
+              <input type="date" id="rateImportTo" />
+            </label>
+          </div>
+          <div>
+            <label>Workbook
+              <input type="file" id="rateImportFile"
+                     accept=".xlsx,.xls,.xlsm,.csv,.txt" required />
+            </label>
+            <label>Notes
+              <input type="text" id="rateImportNotes"
+                     placeholder="optional" />
+            </label>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button type="submit" class="btn primary">Upload Tariff</button>
+        </div>
+      </form>
+      <div id="rateImportSummary"></div>
+
+      <h3>Active &amp; Past Schedules</h3>
+      <div class="scroll-x" id="rateScheduleGrid">
+        <div class="small">Loading…</div>
+      </div>
+
+      <!-- Lightweight inline toast for this panel — used by
+           imports_panel.js when the global window.toast() is not
+           available (e.g. on first paint before app.js runs). -->
+      <div class="imports-toast" id="importsToast" style="display:none"></div>
+    </section>
+
     <!-- ============================ SEARCH ============================ -->
     <section class="panel" id="panel-search">
       <h2>Consumer Search</h2>
@@ -555,6 +672,14 @@
        state, never alters the LFHD calculation. Loads after app.js
        so its MutationObserver picks up rows app.js has rendered. -->
   <script src="/frontend/static/lfhd_grouper.js"></script>
+  <!-- Live Tariff Preview (PR: feat/rate-master-tariff-timeline).
+       Read-only fetch of GET /api/rates/preview on form changes.
+       No app.js or calculator modification — purely informational. -->
+  <script src="/frontend/static/tariff_preview.js"></script>
+  <!-- Imports tab DOM glue (PR: feat/rate-master-tariff-timeline).
+       Wires the two upload cards + the schedule grid to the new
+       /api/rates/* and existing /api/historical/* endpoints. -->
+  <script src="/frontend/static/imports_panel.js"></script>
   <!-- Mobile UX progressive enhancement (hamburger, sticky actions,
        table-as-cards). Loads after app.js, never modifies its state. -->
   <script src="/frontend/static/mobile.js"></script>

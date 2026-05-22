@@ -131,6 +131,28 @@
   }
 
   /** ------------------------------------------------------------- *
+   *  Subcategory dropdown — populate based on a category value.    *
+   *  PR: feat/rate-master-tariff-timeline.  Mirrors the supply-    *
+   *  type populator: clears, refills from window.RAID_TARIFF_      *
+   *  MAPPING.subcategories[category], leaves an empty placeholder  *
+   *  if the category has no entry.                                  *
+   * ------------------------------------------------------------- */
+
+  function populateSubcategories(subSel, category, mapping) {
+    var subs = (typeof mapping.getSubcategories === 'function')
+      ? mapping.getSubcategories(category)
+      : [];
+    clearOptions(subSel);
+    if (!subs || subs.length === 0) {
+      subSel.appendChild(makeOption('', '— n/a —', false));
+      return;
+    }
+    subs.forEach(function (s) {
+      subSel.appendChild(makeOption(s, s, false));
+    });
+  }
+
+  /** ------------------------------------------------------------- *
    *  Patch a select's .value setter (per-element, not prototype).  *
    *                                                                 *
    *  - For #f_category: also repopulate #f_supply on every          *
@@ -207,6 +229,10 @@
       // The New Case panel may have been re-laid-out; fail closed.
       return;
     }
+    // The Subcategory select was added in PR feat/rate-master-tariff-
+    // timeline.  It's optional — older HTML without #f_subcategory
+    // still works because we no-op when the element is absent.
+    var subSel = $('#f_subcategory');
 
     // Idempotency guard — safe to call setupLinkage() multiple times.
     if (catSel.dataset.linkageReady === '1') return;
@@ -214,6 +240,7 @@
     /* ---- 1. Hydrate options from the mapping. ---- */
     populateCategories(catSel, mapping);
     populateSupplyTypes(supplySel, catSel.value, mapping);
+    if (subSel) populateSubcategories(subSel, catSel.value, mapping);
 
     /* ---- 2. User-driven changes. ---- *
      * The browser fires native 'change' on user interaction (mouse,
@@ -222,6 +249,7 @@
      * patch below handles the programmatic path.                  */
     catSel.addEventListener('change', function () {
       populateSupplyTypes(supplySel, catSel.value, mapping);
+      if (subSel) populateSubcategories(subSel, catSel.value, mapping);
     });
 
     /* ---- 3. Programmatic round-trip safety. ---- *
@@ -231,11 +259,12 @@
       injectLegacy: true,
       legacyAtTop:  false,           // legacies appended at end of master list
       afterSet: function (newCategory) {
-        // Repopulate supply synchronously; if newCategory is unknown
-        // the supply list collapses to the defensive '— select —'
-        // option and the supply patch below will inject any legacy
-        // supply_type value on its next assignment.
+        // Repopulate supply + subcategory synchronously; if
+        // newCategory is unknown both lists collapse to defensive
+        // placeholders and their own setter patches inject legacy
+        // values from the saved case.
         populateSupplyTypes(supplySel, newCategory, mapping);
+        if (subSel) populateSubcategories(subSel, newCategory, mapping);
       }
     });
 
@@ -243,6 +272,13 @@
       injectLegacy: true,
       legacyAtTop:  true             // legacies prepended so they're visible first
     });
+
+    if (subSel) {
+      patchValueSetter(subSel, {
+        injectLegacy: true,
+        legacyAtTop:  true
+      });
+    }
 
     catSel.dataset.linkageReady = '1';
   }

@@ -518,3 +518,174 @@
   .lfhd-summary .lfhd-math    { font-size: 12px; }
   .lfhd-summary .lfhd-devices { margin-left: 18px; }
 }
+
+
+
+/* ==================================================================
+   10. IMPORTS PANEL  +  LIVE TARIFF PREVIEW
+   ------------------------------------------------------------------
+   Styles for the new top-level "Imports" tab and the small live
+   tariff preview card on the New Case form.  All scoped via class
+   names so they cannot affect existing surfaces.
+   ================================================================== */
+
+/* ---- Imports tab cards ---- */
+.imports-form {
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+}
+.imports-form .imports-file-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.imports-summary {
+  margin-top: 8px;
+}
+.imports-kpis {
+  margin-bottom: 6px;
+}
+.imports-kpis .kpi-value.good { color: #047857; }
+.imports-kpis .kpi-value.warn { color: #b45309; }
+.imports-errs {
+  margin-top: 6px;
+  font-size: 12px;
+}
+.imports-errs ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+}
+.imports-err {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12.5px;
+}
+
+/* ---- Conflict resolution banner ---- */
+.imports-conflict {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-left: 4px solid #f59e0b;
+  border-radius: 4px;
+}
+.imports-conflict-title {
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+.imports-conflict ul {
+  margin: 4px 0 8px 20px;
+  padding: 0;
+}
+.imports-conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---- Inline toast (only used when app.js's toast() is unreachable) ---- */
+.imports-toast {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.imports-toast.err {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+/* ---- Schedule grid table — minor compactness on top of .data-table ---- */
+#rateScheduleGrid .badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+#rateScheduleGrid .badge.ok {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+#rateScheduleGrid .badge.muted {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+#rateScheduleGrid .btn.danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+/* ---- Live Tariff Preview card on New Case ---- */
+.tariff-preview-card {
+  margin: 6px 0 14px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+  border: 1px solid #bae6fd;
+}
+.tariff-preview-card .tariff-empty {
+  color: var(--muted, #6b7280);
+}
+.tariff-preview-card .tariff-err {
+  color: #991b1b;
+  background: #fef2f2;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+.tariff-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px 16px;
+}
+.tariff-preview-grid .tp-col {
+  min-width: 0;
+}
+.tariff-preview-grid .tp-label {
+  font-size: 10.5px;
+  color: var(--muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tariff-preview-grid .tp-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary, #305496);
+  margin-top: 1px;
+}
+.tariff-preview-grid .tp-value.rate {
+  color: #047857;
+  font-size: 16px;
+}
+.tariff-preview-grid .tp-sub {
+  color: var(--muted, #6b7280);
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .tariff-preview-grid {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .tariff-preview-grid .tp-col + .tp-col {
+    border-top: 1px dashed var(--border, #e5e7eb);
+    padding-top: 4px;
+  }
+}

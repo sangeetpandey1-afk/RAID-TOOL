@@ -85,10 +85,16 @@ def create_app() -> Flask:
     # /api/cases/<id>/offense-check route, which keeps its existing
     # fuzzy fallback semantics for backward compatibility.
     from .routes.historical import bp as historical_bp
+    # Tariff schedules + rate master + timeline engine (PR:
+    # feat/rate-master-tariff-timeline).  Lives in its own
+    # tariff_schedules + tariff_rates tables, so it does NOT touch
+    # the legacy `rate_master` table that services/calculator.py
+    # still reads from.
+    from .routes.rates import bp as rates_bp
 
     for bp in (health_bp, master_bp, consumer_bp, case_bp, doc_bp,
                payment_bp, inquiry_bp, notice_bp, devrate_bp,
-               backup_bp, reports_bp, historical_bp):
+               backup_bp, reports_bp, historical_bp, rates_bp):
         app.register_blueprint(bp)
 
     # ----------------- error handlers (no more silent 500s) ----------

@@ -120,20 +120,89 @@ _LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
     ("idx_hist_source",
      "CREATE INDEX IF NOT EXISTS idx_hist_source "
      "ON historical_cases(source)"),
+    # Tariff timeline engine indexes (PR: feat/rate-master-tariff-timeline)
+    ("idx_tariff_rate_schedule",
+     "CREATE INDEX IF NOT EXISTS idx_tariff_rate_schedule "
+     "ON tariff_rates(schedule_id)"),
+    ("idx_tariff_rate_lookup",
+     "CREATE INDEX IF NOT EXISTS idx_tariff_rate_lookup "
+     "ON tariff_rates(category, subcategory)"),
+    ("idx_tariff_schedule_active",
+     "CREATE INDEX IF NOT EXISTS idx_tariff_schedule_active "
+     "ON tariff_schedules(is_active)"),
+    ("idx_tariff_schedule_dates",
+     "CREATE INDEX IF NOT EXISTS idx_tariff_schedule_dates "
+     "ON tariff_schedules(effective_from, effective_to)"),
+]
+
+# Additive CREATE TABLE statements (idempotent via IF NOT EXISTS).
+# These tables sit alongside the existing schema — they NEVER replace
+# or rename existing tables.  In particular:
+#   * `tariff_schedules` + `tariff_rates` are NEW tables introduced by
+#     PR feat/rate-master-tariff-timeline.  They coexist with the
+#     legacy `rate_master` table (used by services/calculator.py)
+#     until a future PR migrates the calculator to read from the new
+#     ones.  The user's spec calls the second table "rate_master"; we
+#     name it `tariff_rates` to avoid colliding with the legacy table
+#     and breaking the live LFHD calculator.
+_LIGHTWEIGHT_TABLE_CREATES: list[tuple[str, str]] = [
+    ("tariff_schedules", """
+        CREATE TABLE IF NOT EXISTS tariff_schedules (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            schedule_name   TEXT NOT NULL,
+            effective_from  TEXT,
+            effective_to    TEXT,
+            uploaded_at     TEXT DEFAULT (datetime('now')),
+            is_active       INTEGER DEFAULT 1,
+            source_file     TEXT,
+            notes           TEXT
+        )
+    """),
+    ("tariff_rates", """
+        CREATE TABLE IF NOT EXISTS tariff_rates (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            schedule_id        INTEGER NOT NULL,
+            category           TEXT NOT NULL,
+            subcategory        TEXT,
+            supply_type        TEXT,
+            load_from          REAL,
+            load_to            REAL,
+            unit_from          REAL,
+            unit_to            REAL,
+            fixed_charge       REAL DEFAULT 0,
+            energy_charge      REAL DEFAULT 0,
+            minimum_charge     REAL DEFAULT 0,
+            duty_percent       REAL DEFAULT 0,
+            multiplier_default REAL DEFAULT 2,
+            FOREIGN KEY(schedule_id) REFERENCES tariff_schedules(id) ON DELETE CASCADE
+        )
+    """),
 ]
 
 
 def _apply_lightweight_migrations() -> None:
-    """Add nullable columns / indexes that newer code expects, idempotently."""
+    """Add nullable columns / indexes / tables that newer code expects."""
     with standalone_connection() as conn:
+        # 1. New tables (no-op if already present).
+        for table_name, ddl in _LIGHTWEIGHT_TABLE_CREATES:
+            existing = conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='table' AND name=?",
+                (table_name,),
+            ).fetchone()
+            conn.execute(ddl)
+            if not existing:
+                log.info("Migration: created table %s", table_name)
+        # 2. Additive columns on existing tables.
         for table, column, coltype in _LIGHTWEIGHT_COLUMN_ADDS:
-            existing = {r["name"] for r in
-                        conn.execute(f"PRAGMA table_info({table})").fetchall()}
-            if column not in existing:
+            existing_cols = {r["name"] for r in
+                             conn.execute(f"PRAGMA table_info({table})").fetchall()}
+            if column not in existing_cols:
                 conn.execute(
                     f"ALTER TABLE {table} ADD COLUMN {column} {coltype}"
                 )
                 log.info("Migration: added %s.%s (%s)", table, column, coltype)
+        # 3. Indexes (every CREATE INDEX uses IF NOT EXISTS, so idempotent).
         for _name, sql in _LIGHTWEIGHT_INDEX_ADDS:
             conn.execute(sql)
 
