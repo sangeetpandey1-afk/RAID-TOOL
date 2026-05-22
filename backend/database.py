@@ -93,6 +93,16 @@ _LIGHTWEIGHT_COLUMN_ADDS: list[tuple[str, str, str]] = [
     # Contracted/Sanctioned load on the meter — both fields exist on
     # purpose. Nullable; older rows simply get NULL.
     ("raid_cases", "total_connected_load_kw", "REAL"),
+    # Historical import (PR: feat/historical-import-offense).  These
+    # extend the pre-existing historical_cases table without touching
+    # any other table.  All three columns are nullable so older rows
+    # imported before this PR continue to round-trip cleanly.
+    ("historical_cases", "old_case_ref",       "TEXT"),
+    ("historical_cases", "compounding_amount", "REAL"),
+    # Stable content-fingerprint used by INSERT OR IGNORE to make
+    # repeated uploads of the same workbook idempotent.  Computed by
+    # services/historical_import.make_dedup_key().
+    ("historical_cases", "dedup_key",          "TEXT"),
 ]
 
 _LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
@@ -100,6 +110,16 @@ _LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
     ("idx_case_check_report",
      "CREATE INDEX IF NOT EXISTS idx_case_check_report "
      "ON raid_cases(checking_report_number)"),
+    # UNIQUE on dedup_key turns INSERT OR IGNORE into a clean dedup;
+    # NULL is allowed and treated as distinct, so rows imported
+    # before this migration (which have NULL dedup_key) stay valid.
+    ("idx_hist_dedup",
+     "CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_dedup "
+     "ON historical_cases(dedup_key) WHERE dedup_key IS NOT NULL"),
+    # Convenience index for /api/historical/stats GROUP BY source.
+    ("idx_hist_source",
+     "CREATE INDEX IF NOT EXISTS idx_hist_source "
+     "ON historical_cases(source)"),
 ]
 
 
