@@ -1,0 +1,109 @@
+/* ==================================================================
+   Raid Management System — Tariff dropdowns + preview styles (PR3).
+
+   Loaded AFTER imports.css so any rule here wins on desktop. All
+   rules live under #panel-new-case OR target IDs that exist only
+   inside the New Case form, so they cannot leak.
+
+   PR3 hides the visible Supply Type label per spec:
+       "remove visible Supply Type dropdown ONLY"
+   The underlying <select id="f_supply"> stays in the DOM and continues
+   to receive a value (auto-derived from condition_load by tariff.js)
+   so save_case() in app.js keeps working without any change.
+   ================================================================== */
+
+/* ---- Hide visible Supply Type label (keep DOM/value live) ---- */
+#panel-new-case #lbl_supply {
+  display: none !important;
+}
+
+/* ---- Subcategory + Condition/Load fields use compact grid ---- */
+#panel-new-case #lbl_subcategory,
+#panel-new-case #lbl_condition_load {
+  /* match the .form-grid.dense gap rhythm */
+  margin: 0;
+}
+
+#panel-new-case #f_condition_text {
+  background: #f3f4f6;
+  color: #1f2937;
+  border-color: #d1d5db;
+  font-style: italic;
+  cursor: not-allowed;
+}
+#panel-new-case #f_condition_text:focus {
+  /* readonly — keep its muted appearance even on focus */
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  box-shadow: none;
+}
+
+/* ---- Live Tariff Preview ---- */
+#panel-new-case .tariff-preview {
+  margin: 8px 0 12px;
+  border: 1px solid #d1d5db;
+  border-left: 4px solid #305496;
+  border-radius: 4px;
+  background: #f8fafc;
+  padding: 6px 12px;
+}
+#panel-new-case .tariff-preview > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #305496;
+  user-select: none;
+  padding: 2px 0;
+}
+#panel-new-case .tariff-preview > summary .small {
+  font-weight: 400;
+  color: #6b7280;
+  margin-left: 6px;
+}
+#panel-new-case .tariff-preview-body {
+  padding: 8px 0 4px;
+}
+
+#panel-new-case .tariff-preview .tp-h {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #305496;
+  font-weight: 600;
+  border-bottom: 1px dashed #cbd5e1;
+  padding-bottom: 2px;
+}
+
+#panel-new-case .tariff-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 769px) {
+  #panel-new-case .tariff-preview-grid {
+    grid-template-columns: 1.2fr 1fr;
+    gap: 14px;
+  }
+}
+
+#panel-new-case .tariff-preview-body .data-table {
+  font-size: 12px;
+  margin: 0;
+}
+#panel-new-case .tariff-preview-body .data-table thead th {
+  background: #eef2ff;
+  color: #1e3a8a;
+}
+#panel-new-case .tariff-preview-body p.explanation {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  background: #fefce8;
+  border-left: 3px solid #facc15;
+  border-radius: 0 3px 3px 0;
+  color: #713f12;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+#panel-new-case .err-text {
+  color: #b91c1c;
+  font-size: 12px;
+}

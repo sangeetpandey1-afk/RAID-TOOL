@@ -13,6 +13,9 @@
   <link rel="stylesheet" href="/frontend/static/compact.css" />
   <!-- PR2 — Imports tab styles (additive, scoped under #panel-imports). -->
   <link rel="stylesheet" href="/frontend/static/imports.css" />
+  <!-- PR3 — Tariff dropdowns + preview styles (additive). Hides
+       Supply Type label visually while keeping the <select> live. -->
+  <link rel="stylesheet" href="/frontend/static/tariff.css" />
 </head>
 <body>
   <header class="topbar">
@@ -215,6 +218,26 @@
               <option>Other</option>
             </select>
           </label>
+          <!-- PR3 — Subcategory cascading dropdown. Populated from
+               /api/rates/subcategories?category=… as soon as a category
+               is chosen and at least one tariff schedule is uploaded.
+               Falls back to "(any load band)" when no condition_load
+               rows exist for the category. -->
+          <label id="lbl_subcategory">Subcategory
+            <select id="f_subcategory">
+              <option value="">(any load band)</option>
+            </select>
+          </label>
+          <!-- PR3 — Readonly Condition / Load text. Auto-filled from the
+               matched tariff row's `condition` text. The hidden
+               #f_condition_load companion stores the canonical load-band
+               key (domestic / commercial / industrial) so the calculator
+               and timeline engine can use it. -->
+          <label id="lbl_condition_load">Condition / Load
+            <input id="f_condition_text" type="text" readonly
+                   placeholder="auto · pick Category & Subcategory" />
+            <input id="f_condition_load" type="hidden" />
+          </label>
           <label>Process / Usage Type
             <select id="f_process_type">
               <option value="">— select —</option>
@@ -225,7 +248,11 @@
               <option>Other</option>
             </select>
           </label>
-          <label>Supply Type
+          <!-- PR3 hides this label visibly via tariff.css; the underlying
+               <select> stays in the DOM so save_case() still sends a
+               supply_type value (auto-derived from condition_load by
+               tariff.js). -->
+          <label id="lbl_supply">Supply Type
             <select id="f_supply">
               <option>Domestic</option>
               <option>Commercial</option>
@@ -254,6 +281,22 @@
           </label>
         </div>
       </div>
+
+      <!-- PR3 — LIVE TARIFF PREVIEW
+           Shows the slab table + fixed/duty/meter/rebate metadata that
+           will be used for the calculation given the chosen
+           Category + Subcategory + Inspection Date. Refreshes whenever
+           any of those inputs changes. -->
+      <details id="tariffPreviewWrap" class="tariff-preview" open>
+        <summary>📊 Live Tariff Preview
+          <span class="small" id="tariffPreviewSubtitle">— pick Category & Subcategory</span>
+        </summary>
+        <div id="tariffPreviewBody" class="tariff-preview-body small">
+          Pick a Category and Subcategory above to see the active slab
+          table, fixed charges, duty %, meter rent, and rebate that the
+          calculator will use.
+        </div>
+      </details>
 
       <!-- ========== SECTION 4 — DEVICE DETAILS (LFHD) ========== -->
       <h3 class="sec-title"><span class="sec-num">4</span> Device Details (LFHD)
@@ -596,5 +639,10 @@
   <!-- PR2 — Imports tab logic (file uploads + schedule list + overlap UI).
        Loaded after app.js so it can reuse API/$/$$/toast/STATE. -->
   <script src="/frontend/static/imports.js"></script>
+  <!-- PR3 — Category/Subcategory cascading + live tariff preview.
+       Loaded after app.js so it can reuse API/$/$$/toast and listen
+       to f_category / f_subcategory / f_inspection changes without
+       overriding any existing handler. -->
+  <script src="/frontend/static/tariff.js"></script>
 </body>
 </html>
