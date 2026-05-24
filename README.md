@@ -48,14 +48,18 @@ Server starts on `http://localhost:5000`. **Open `http://localhost:5000/` in you
 ### 4. Place & Import Master-Data Files
 Drop these Excel files into `master_data/` folder:
 
-| Required content                  | Accepted file names |
-|----------------------------------|---------------------|
-| Consumer master (69 k records)   | `raid_master_data.xlsx` |
-| Historical cases (8956 records)  | `ALL DATA.xlsx`, `all_data.xlsx` |
-| Active cases (24 k records)      | `raid excell 2526 Copy.xlsx`, `current_cases.xlsx` |
-| Device master                    | `device list.xlsx`, `device_list.xlsx` |
-| Rate slabs                       | `slab_rates.xlsx` |
-| Account mapping (optional)       | `account_mapping.xlsx` |
+| Required content                  | Accepted file names | Sample to compare against |
+|----------------------------------|---------------------|--------------------------|
+| Consumer master (69 k records)   | `raid_master_data.xlsx` | [`master_data/SAMPLE_raid_master_data.xlsx`](./master_data/SAMPLE_raid_master_data.xlsx) |
+| Historical cases (8956 records)  | `ALL DATA.xlsx`, `all_data.xlsx` | [`master_data/SAMPLE_all_data.xlsx`](./master_data/SAMPLE_all_data.xlsx) |
+| Active cases (24 k records)      | `raid excell 2526 Copy.xlsx`, `current_cases.xlsx` | [`master_data/SAMPLE_raid_excell_2526.xlsx`](./master_data/SAMPLE_raid_excell_2526.xlsx) |
+| Device master                    | `device list.xlsx`, `device_list.xlsx` | [`master_data/SAMPLE_device_list.xlsx`](./master_data/SAMPLE_device_list.xlsx) |
+| Rate slabs                       | `slab_rates.xlsx` | [`master_data/SAMPLE_slab_rates.xlsx`](./master_data/SAMPLE_slab_rates.xlsx) |
+| Account mapping (optional)       | `account_mapping.xlsx` | [`master_data/SAMPLE_account_mapping.xlsx`](./master_data/SAMPLE_account_mapping.xlsx) |
+
+> 📑 **Open the SAMPLE workbooks first** to see the exact column headings and data shape the importer expects.
+> Full column-by-column reference (including all accepted synonyms) is in [`master_data/SAMPLE_README.md`](./master_data/SAMPLE_README.md).
+> To regenerate the samples after editing: `python scripts/generate_sample_excels.py`.
 
 Then go to **Master Data → Import All Master Data** in the UI, or via curl:
 ```cmd

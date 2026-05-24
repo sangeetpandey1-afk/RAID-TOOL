@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imports — Raid Management System</title>
+<style>
+  :root {
+    --primary: #305496;
+    --primary-dark: #1f3864;
+    --accent: #2e7d32;
+    --accent-dark: #1b5e20;
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --border: #d6dbe5;
+    --text: #1f2937;
+    --text-muted: #6b7280;
+    --danger: #c62828;
+    --warn: #ef6c00;
+    --ok: #2e7d32;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 1rem 1.5rem;
+    box-shadow: var(--shadow);
+  }
+  header h1 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+  header .sub { font-size: 0.85rem; opacity: 0.9; margin-top: 0.15rem; }
+
+  .container {
+    max-width: 1100px;
+    margin: 1.5rem auto;
+    padding: 0 1rem;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .toolbar .info { color: var(--text-muted); font-size: 0.875rem; flex: 1 1 auto; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.1rem 1rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+  }
+  .card h2 {
+    margin: 0 0 0.15rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card .target {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 0.85rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  input[type="file"] {
+    flex: 1 1 200px;
+    min-width: 0;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 0.875rem;
+  }
+  input[type="file"]::file-selector-button {
+    border: 0;
+    background: var(--primary);
+    color: white;
+    padding: 0.4rem 0.75rem;
+    margin-right: 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  button.btn, a.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 0;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  button.btn-primary { background: var(--primary); color: #fff; }
+  button.btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+  button.btn-primary:disabled { background: #93a3c4; cursor: not-allowed; }
+
+  a.btn-sample {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+  }
+  a.btn-sample:hover { background: var(--accent-dark); }
+  a.btn-sample::before {
+    content: "⬇";
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+
+  .helper {
+    margin: 0.55rem 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .result {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: #f1f3f8;
+    color: var(--text);
+    white-space: pre-wrap;
+    display: none;
+    border-left: 3px solid var(--border);
+  }
+  .result.show { display: block; }
+  .result.ok { background: #e8f5e9; border-left-color: var(--ok); }
+  .result.err { background: #ffebee; border-left-color: var(--danger); }
+  .result.warn { background: #fff3e0; border-left-color: var(--warn); }
+
+  /* "Run All" button - full-width success */
+  .run-all-card {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #305496, #1f3864);
+    color: white;
+    text-align: center;
+    border: 0;
+  }
+  .run-all-card h2 { color: white; }
+  .run-all-card .target { color: rgba(255,255,255,0.7); }
+  .run-all-card button.btn-primary {
+    background: white;
+    color: var(--primary-dark);
+    font-weight: 600;
+  }
+  .run-all-card button.btn-primary:hover:not(:disabled) {
+    background: #f0f0f0;
+  }
+
+  /* Mobile */
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    header { padding: 0.85rem 1rem; }
+    .container { margin: 1rem auto; }
+    .row { gap: 0.4rem; }
+    button.btn, a.btn { width: 100%; justify-content: center; }
+    input[type="file"] { width: 100%; flex-basis: auto; }
+  }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: #e8eaf0;
+    color: var(--primary-dark);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Imports — विद्युत चोरी रेड प्रबंधन सिस्टम</h1>
+  <div class="sub">Upload Excel master-data files. Use the sample format if unsure.</div>
+</header>
+
+<div class="container">
+
+  <div class="toolbar">
+    <div class="info">
+      Server: <code id="health">checking…</code>
+    </div>
+    <button id="refresh-health" class="btn btn-primary" type="button">Refresh</button>
+  </div>
+
+  <div class="grid" id="grid">
+
+    <!-- 1. Master Consumer -->
+    <section class="card" data-kind="consumers">
+      <h2>Master Consumer Upload <span class="badge">consumers</span></h2>
+      <div class="target">→ table: <code>consumers</code> · ~69k production rows</div>
+      <div class="row">
+        <input type="file" accept=".xlsx,.xls,.xlsm" data-input>
+        <button type="button" class="btn btn-primary" data-upload>Upload</button>
+        <a class="btn btn-sample"
+           href="/samples/consumers"
+           download="SAMPLE_raid_master_data.xlsx">Download Sample Format</a>
+      </div>
+      <p class="helper">Upload Excel in the same format as the sample file.</p>
+      <div class="result" data-result></div>
+    </section>
+
+    <!-- 2. Historical -->
+    <section class="card" data-kind="historical">
+      <h2>Historical Cases Upload <span class="badge">historical</span></h2>
+      <div class="target">→ table: <code>historical_cases</code> · ~8,956 rows</div>
+      <div class="row">
+        <input type="file" accept=".xlsx,.xls,.xlsm" data-input>
+        <button type="button" class="btn btn-primary" data-upload>Upload</button>
+        <a class="btn btn-sample"
+           href="/samples/historical"
+           download="SAMPLE_all_data.xlsx">Download Sample Format</a>
+      </div>
+      <p class="helper">Upload Excel in the same format as the sample file.</p>
+      <div class="result" data-result></div>
+    </section>
+
+    <!-- 3. Current / Active Cases -->
+    <section class="card" data-kind="current">
+      <h2>Active Cases Upload <span class="badge">current</span></h2>
+      <div class="target">→ table: <code>current_cases</code> · ~24k rows (FY 25-26)</div>
+      <div class="row">
+        <input type="file" accept=".xlsx,.xls,.xlsm" data-input>
+        <button type="button" class="btn btn-primary" data-upload>Upload</button>
+        <a class="btn btn-sample"
+           href="/samples/current"
+           download="SAMPLE_raid_excell_2526.xlsx">Download Sample Format</a>
+      </div>
+      <p class="helper">Upload Excel in the same format as the sample file.</p>
+      <div class="result" data-result></div>
+    </section>
+
+    <!-- 4. Tariff / Slab Rates -->
+    <section class="card" data-kind="rates">
+      <h2>Tariff Upload <span class="badge">rates</span></h2>
+      <div class="target">→ table: <code>rate_master</code> · slab-wise (LMV-1 … LMV-9)</div>
+      <div class="row">
+        <input type="file" accept=".xlsx,.xls,.xlsm" data-input>
+        <button type="button" class="btn btn-primary" data-upload>Upload</button>
+        <a class="btn btn-sample"
+           href="/samples/rates"
+           download="SAMPLE_slab_rates.xlsx">Download Sample Format</a>
+      </div>
+      <p class="helper">Upload Excel in the same format as the sample file.</p>
+      <div class="result" data-result></div>
+    </section>
+
+    <!-- 5. Device Master -->
+    <section class="card" data-kind="devices">
+      <h2>Device Upload <span class="badge">devices</span></h2>
+      <div class="target">→ table: <code>device_master</code> · 40 default + custom</div>
+      <div class="row">
+        <input type="file" accept=".xlsx,.xls,.xlsm" data-input>
+        <button type="button" class="btn btn-primary" data-upload>Upload</button>
+        <a class="btn btn-sample"
+           href="/samples/devices"
+           download="SAMPLE_device_list.xlsx">Download Sample Format</a>
+      </div>
+      <p class="helper">Upload Excel in the same format as the sample file.</p>
+      <div class="result" data-result></div>
+    </section>
+
+    <!-- 6. Account Mapping -->
+    <section class="card" data-kind="mapping">
+      <h2>Account Mapping Upload <span class="badge">mapping</span></h2>
+      <div class="target">→ table: <code>account_mapping</code> · old↔new bridge</div>
+      <div class="row">
+        <input type="file" accept=".xlsx,.xls,.xlsm" data-input>
+        <button type="button" class="btn btn-primary" data-upload>Upload</button>
+        <a class="btn btn-sample"
+           href="/samples/mapping"
+           download="SAMPLE_account_mapping.xlsx">Download Sample Format</a>
+      </div>
+      <p class="helper">Upload Excel in the same format as the sample file.</p>
+      <div class="result" data-result></div>
+    </section>
+
+    <!-- Run-all action card -->
+    <section class="card run-all-card">
+      <h2>Run All Imports</h2>
+      <div class="target">Imports every file already present in the server's <code>master_data/</code> folder.</div>
+      <div style="margin-top: 0.6rem;">
+        <button type="button" class="btn btn-primary" id="run-all">Import All</button>
+      </div>
+      <div class="result" id="run-all-result"></div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  const KIND_LABELS = {
+    consumers: 'Consumers',
+    historical: 'Historical',
+    current: 'Active Cases',
+    rates: 'Tariff',
+    devices: 'Devices',
+    mapping: 'Account Mapping',
+  };
+
+  // ----- health check ------
+  async function refreshHealth() {
+    const el = document.getElementById('health');
+    el.textContent = 'checking…';
+    try {
+      const r = await fetch('/api/health');
+      const j = await r.json();
+      if (j.ok) {
+        const counts = j.data && j.data.counts ? j.data.counts : {};
+        const parts = Object.entries(counts).map(([k,v]) => `${k}=${v}`).join(' · ');
+        el.textContent = `OK — ${parts || 'connected'}`;
+        el.style.color = '#2e7d32';
+      } else {
+        el.textContent = 'error: ' + (j.error || 'unknown');
+        el.style.color = '#c62828';
+      }
+    } catch (e) {
+      el.textContent = 'cannot reach backend (' + e.message + ')';
+      el.style.color = '#c62828';
+    }
+  }
+  document.getElementById('refresh-health').addEventListener('click', refreshHealth);
+  refreshHealth();
+
+  // ----- helper to format report ------
+  function formatReport(rep) {
+    if (!rep) return '(no report)';
+    const lines = [];
+    lines.push(`File:      ${rep.file_path || '(uploaded)'}`);
+    lines.push(`Total:     ${rep.total_rows ?? '?'} rows`);
+    lines.push(`Inserted:  ${rep.inserted ?? 0}`);
+    lines.push(`Updated:   ${rep.updated ?? 0}`);
+    lines.push(`Skipped:   ${rep.skipped ?? 0}`);
+    lines.push(`Errors:    ${rep.error_count ?? 0}`);
+    lines.push(`Time:      ${rep.duration_ms ?? '?'} ms`);
+    if (rep.column_mapping) {
+      lines.push('');
+      lines.push('Column mapping detected:');
+      for (const [tgt, col] of Object.entries(rep.column_mapping)) {
+        lines.push(`  ${tgt.padEnd(20)} ← "${col}"`);
+      }
+    }
+    if (rep.errors_sample && rep.errors_sample.length) {
+      lines.push('');
+      lines.push('First errors:');
+      for (const e of rep.errors_sample.slice(0, 5)) {
+        lines.push(`  row ${e.row}: ${e.reason}`);
+      }
+    }
+    if (rep.warnings && rep.warnings.length) {
+      lines.push('');
+      lines.push('Warnings:');
+      for (const w of rep.warnings) lines.push('  ' + w);
+    }
+    return lines.join('\n');
+  }
+
+  function showResult(panel, status, text) {
+    panel.classList.remove('ok', 'err', 'warn');
+    panel.classList.add('show', status);
+    panel.textContent = text;
+  }
+
+  // ----- per-card upload ------
+  document.querySelectorAll('.card[data-kind]').forEach(card => {
+    const kind     = card.dataset.kind;
+    const fileEl   = card.querySelector('[data-input]');
+    const btn      = card.querySelector('[data-upload]');
+    const result   = card.querySelector('[data-result]');
+
+    btn.addEventListener('click', async () => {
+      const file = fileEl.files && fileEl.files[0];
+      if (!file) {
+        showResult(result, 'warn', 'Choose an Excel file (.xlsx) first.');
+        return;
+      }
+      btn.disabled = true;
+      const oldText = btn.textContent;
+      btn.textContent = 'Uploading…';
+      showResult(result, '', `Uploading ${file.name} (${(file.size/1024).toFixed(1)} KB)…`);
+
+      try {
+        const fd = new FormData();
+        fd.append('file', file, file.name);
+        const r = await fetch(`/api/import_master/${kind}`, {
+          method: 'POST',
+          body: fd,
+        });
+        const j = await r.json();
+        if (j.ok) {
+          const rep = j.data;
+          const status = (rep.error_count > 0) ? 'warn' : 'ok';
+          const head = (rep.error_count > 0)
+            ? `⚠ ${KIND_LABELS[kind]} imported with ${rep.error_count} errors\n\n`
+            : `✔ ${KIND_LABELS[kind]} imported successfully\n\n`;
+          showResult(result, status, head + formatReport(rep));
+        } else {
+          showResult(result, 'err',
+            `✘ Import failed\n\n${j.error || ''}\n${j.details || ''}`);
+        }
+      } catch (e) {
+        showResult(result, 'err', `✘ Network error: ${e.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    });
+  });
+
+  // ----- run-all button ------
+  document.getElementById('run-all').addEventListener('click', async () => {
+    const btn = document.getElementById('run-all');
+    const out = document.getElementById('run-all-result');
+    btn.disabled = true;
+    const old = btn.textContent;
+    btn.textContent = 'Running…';
+    showResult(out, '', 'Running all importers from server-side master_data/ folder…');
+    try {
+      const r = await fetch('/api/import_all_master_data', { method: 'POST' });
+      const j = await r.json();
+      if (j.ok) {
+        const s = j.data.summary || {};
+        const reports = j.data.reports || {};
+        const lines = [];
+        lines.push(`Inserted: ${s.total_inserted}  Updated: ${s.total_updated}  Skipped: ${s.total_skipped}  Errors: ${s.total_errors}  (${s.files_imported} files)`);
+        lines.push('');
+        for (const [k, rep] of Object.entries(reports)) {
+          lines.push(`[${k}]  ${rep.inserted}+${rep.updated}u/${rep.total_rows}  errors=${rep.error_count}`);
+        }
+        const status = (s.total_errors > 0) ? 'warn' : 'ok';
+        showResult(out, status, lines.join('\n'));
+        refreshHealth();
+      } else {
+        showResult(out, 'err', `✘ ${j.error}\n${j.details || ''}`);
+      }
+    } catch (e) {
+      showResult(out, 'err', `✘ Network error: ${e.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = old;
+    }
+  });
+})();
+</script>
+</body>
+</html>
