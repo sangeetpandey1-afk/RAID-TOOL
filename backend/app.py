@@ -80,10 +80,16 @@ def create_app() -> Flask:
     from .routes.device_rate import bp as devrate_bp
     from .routes.backup import bp as backup_bp
     from .routes.reports import bp as reports_bp
+    # PR2 — tariff timeline engine + historical offense ingestion.
+    # Both blueprints add new endpoints under /api/rates and
+    # /api/historical; no existing route is shadowed or modified.
+    from .routes.rates import bp as rates_bp
+    from .routes.historical import bp as historical_bp
 
     for bp in (health_bp, master_bp, consumer_bp, case_bp, doc_bp,
                payment_bp, inquiry_bp, notice_bp, devrate_bp,
-               backup_bp, reports_bp):
+               backup_bp, reports_bp,
+               rates_bp, historical_bp):
         app.register_blueprint(bp)
 
     # ----------------- error handlers (no more silent 500s) ----------

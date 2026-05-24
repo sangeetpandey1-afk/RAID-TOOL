@@ -94,6 +94,19 @@ _LIGHTWEIGHT_COLUMN_ADDS: list[tuple[str, str, str]] = [
     # Contracted/Sanctioned load on the meter — both fields exist on
     # purpose. Nullable; older rows simply get NULL.
     ("raid_cases", "total_connected_load_kw", "REAL"),
+
+    # PR2 — historical_cases extensions for richer offense-history preview.
+    # All nullable / additive. Older rows just get NULL.
+    ("historical_cases", "notice_no",         "TEXT"),
+    ("historical_cases", "address",           "TEXT"),
+    ("historical_cases", "use_name",          "TEXT"),
+    ("historical_cases", "user_father_name",  "TEXT"),
+    ("historical_cases", "sub_substation",    "TEXT"),
+    ("historical_cases", "old_account_id",    "TEXT"),
+    ("historical_cases", "new_account_id",    "TEXT"),
+    ("historical_cases", "category",          "TEXT"),
+    ("historical_cases", "irregularity",      "TEXT"),
+    ("historical_cases", "paid_status",       "TEXT"),
 ]
 
 _LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
@@ -101,6 +114,19 @@ _LIGHTWEIGHT_INDEX_ADDS: list[tuple[str, str]] = [
     ("idx_case_check_report",
      "CREATE INDEX IF NOT EXISTS idx_case_check_report "
      "ON raid_cases(checking_report_number)"),
+
+    # PR2 — fast indexed lookup for offense verification (PR4 consumer).
+    # historical_cases.account_id already has idx_hist_account from
+    # schema.sql; these add the new account-id columns introduced above.
+    ("idx_hist_old_account",
+     "CREATE INDEX IF NOT EXISTS idx_hist_old_account "
+     "ON historical_cases(old_account_id)"),
+    ("idx_hist_new_account",
+     "CREATE INDEX IF NOT EXISTS idx_hist_new_account "
+     "ON historical_cases(new_account_id)"),
+    ("idx_hist_notice_no",
+     "CREATE INDEX IF NOT EXISTS idx_hist_notice_no "
+     "ON historical_cases(notice_no)"),
 ]
 
 
