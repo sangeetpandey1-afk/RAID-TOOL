@@ -11,6 +11,8 @@
   <!-- Compact / dense desktop layer; loaded last so its rules win on
        desktop (>=1025px) while mobile.css continues to win on phones. -->
   <link rel="stylesheet" href="/frontend/static/compact.css" />
+  <!-- PR2 — Imports tab styles (additive, scoped under #panel-imports). -->
+  <link rel="stylesheet" href="/frontend/static/imports.css" />
 </head>
 <body>
   <header class="topbar">
@@ -29,6 +31,7 @@
     <button class="tab" data-tab="new-case">New Case</button>
     <button class="tab" data-tab="cases">Raid Master</button>
     <button class="tab" data-tab="search">Search</button>
+    <button class="tab" data-tab="imports">Imports</button>
     <button class="tab" data-tab="backup">Backup</button>
     <button class="tab" data-tab="reports">Reports</button>
   </nav>
@@ -434,6 +437,110 @@
       </div>
     </section>
 
+    <!-- ============================ IMPORTS (PR2) ============================ -->
+    <section class="panel" id="panel-imports">
+      <h2>Imports</h2>
+      <p class="small">
+        Upload tariff rate schedules and historical offense Excel files.
+        Both flows are <b>additive</b> — they never delete or overwrite
+        existing rows. Tariff schedules can coexist (each gets its own
+        <i>schedule_name</i> and effective date window). Historical rows
+        de-duplicate on (Notice No., Account, Date).
+      </p>
+
+      <!-- ---------- TARIFF SCHEDULE UPLOAD ---------- -->
+      <h3 class="sec-title"><span class="sec-num">1</span> Tariff Rate Schedule
+        <span class="small">tariff Excel · slab-wise · effective-date aware</span></h3>
+      <div class="card import-card">
+        <div class="form-grid two-col dense">
+          <div>
+            <label>Excel File (.xlsx / .xlsm)
+              <input id="imp_tariff_file" type="file"
+                     accept=".xlsx,.xlsm,.xls" />
+            </label>
+            <label>Schedule Name
+              <input id="imp_tariff_name" type="text"
+                     placeholder="e.g. UPPCL_2025_LMV1" />
+            </label>
+          </div>
+          <div>
+            <label>Effective From (schedule-level fallback)
+              <input id="imp_tariff_eff_from" type="date" />
+            </label>
+            <label>Effective To (schedule-level fallback)
+              <input id="imp_tariff_eff_to" type="date" />
+            </label>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn primary" data-action="upload-tariff">📤 Upload Schedule</button>
+        </div>
+        <div class="card import-result" id="impTariffResult">
+          No schedule uploaded yet.
+        </div>
+      </div>
+
+      <!-- ---------- ACTIVE SCHEDULES + OVERLAP WARNING ---------- -->
+      <h3 class="sec-title"><span class="sec-num">2</span> Active Tariff Schedules
+        <span class="small">multiple schedules can coexist</span></h3>
+      <div class="actions-row">
+        <button class="btn" data-action="refresh-schedules">🔄 Refresh List</button>
+      </div>
+      <div class="scroll-x">
+        <table class="data-table" id="schedulesTable">
+          <thead>
+            <tr>
+              <th>Schedule Name</th>
+              <th>Categories</th>
+              <th>Earliest</th>
+              <th>Latest</th>
+              <th class="num">Rows</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="schedulesBody"></tbody>
+        </table>
+      </div>
+      <div class="card overlap-warning" id="overlapWarning" style="display:none"></div>
+
+      <!-- ---------- HISTORICAL OFFENSE UPLOAD ---------- -->
+      <h3 class="sec-title"><span class="sec-num">3</span> Historical Offense Excel
+        <span class="small">15-field layout · used by Offense Verification (PR4)</span></h3>
+      <div class="card import-card">
+        <div class="form-grid two-col dense">
+          <div>
+            <label>Excel File (.xlsx / .xlsm)
+              <input id="imp_hist_file" type="file"
+                     accept=".xlsx,.xlsm,.xls" />
+            </label>
+          </div>
+          <div>
+            <label>Source Label (free text)
+              <input id="imp_hist_source" type="text"
+                     placeholder="e.g. ALL_DATA_2024-25" />
+            </label>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn primary" data-action="upload-historical">📤 Upload Historical</button>
+        </div>
+        <div class="card import-result" id="impHistResult">
+          No historical file uploaded yet.
+        </div>
+      </div>
+
+      <p class="small">
+        Expected columns (any case / spacing / punctuation):
+        <code>Notice No.</code>, <code>Div. No.</code>, <code>Date</code>,
+        <code>Name</code>, <code>Father Name</code>, <code>Use Name</code>,
+        <code>User Father Name</code>, <code>Address</code>,
+        <code>Sub Station</code>, <code>Assessment</code>,
+        <code>Old AC No.</code>, <code>New Account Number</code>,
+        <code>Category</code>, <code>Irregularity</code>,
+        <code>Paid/Unpaid</code>.
+      </p>
+    </section>
+
     <!-- ============================ BACKUP ============================ -->
     <section class="panel" id="panel-backup">
       <h2>Local Backup</h2>
@@ -486,5 +593,8 @@
   <!-- Mobile UX progressive enhancement (hamburger, sticky actions,
        table-as-cards). Loads after app.js, never modifies its state. -->
   <script src="/frontend/static/mobile.js"></script>
+  <!-- PR2 — Imports tab logic (file uploads + schedule list + overlap UI).
+       Loaded after app.js so it can reuse API/$/$$/toast/STATE. -->
+  <script src="/frontend/static/imports.js"></script>
 </body>
 </html>
