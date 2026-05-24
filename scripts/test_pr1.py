@@ -1,5 +1,5 @@
 """
-PR1 verification harness — 75 deterministic checks.
+PR1 verification harness — 82 deterministic checks.
 
 Validates the PR1 deliverables and ONLY the PR1 deliverables:
 
@@ -12,6 +12,8 @@ Validates the PR1 deliverables and ONLY the PR1 deliverables:
   7. overlap detection               (Group M)
   8. multiple schedule coexistence   (Group N)
   9. standalone verification script  (this file)
+ 10. hotfix migration on partial pre-existing DB         (Group H)
+ 11. hotfix legacy schedule_id NOT NULL interop          (Group H2)
 
 Validates AGAINST:
   * backend.database._run_tariff_rate_migrations  (idempotent + additive)
@@ -22,7 +24,7 @@ Usage
     python -m scripts.test_pr1
     python -m scripts.test_pr1 /tmp/raid_pr1.db   # custom DB path
 
-Exit code 0 on success (75/75), 1 on any failure.
+Exit code 0 on success (82/82), 1 on any failure.
 """
 from __future__ import annotations
 
@@ -502,6 +504,208 @@ check(
     _picked is not None and _picked.get("schedule_name") in {"sched_2024", "sched_2025"},
     detail=f"picked={_picked}",
 )
+
+
+# =====================================================================
+# Group H: Hotfix migration — partial pre-existing table (5 checks)
+# [76-80]
+#
+# Reproduces the production bug:
+#   "table tariff_rates has no column named slab_start"
+#
+# An older deployment created a partial tariff_rates table from the
+# mixed branch. CREATE TABLE IF NOT EXISTS was a no-op on it, so the
+# previous PR1-only migration only checked 6 extension columns and
+# left the BASE columns missing. The hotfix checks every column.
+# =====================================================================
+import sqlite3 as _sqlite3  # noqa: E402
+
+# Build a brand-new DB at a temp path, manually create a *partial*
+# tariff_rates table that only has (id, category, schedule_name) — the
+# exact failure shape — then run init_schema and verify the migration
+# fills in EVERY required column.
+_HOTFIX_DB = tempfile.mktemp(prefix="raid_pr1_hotfix_", suffix=".db")
+if os.path.exists(_HOTFIX_DB):
+    os.unlink(_HOTFIX_DB)
+
+# Pre-create a partial table BEFORE init_schema runs.
+_pre = _sqlite3.connect(_HOTFIX_DB)
+_pre.execute("""
+    CREATE TABLE tariff_rates (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        category      TEXT,
+        schedule_name TEXT
+    )
+""")
+# Seed one row of "production data" we must NEVER lose.
+_pre.execute(
+    "INSERT INTO tariff_rates (category, schedule_name) VALUES (?, ?)",
+    ("LMV-1-LEGACY", "old_partial_schedule"),
+)
+_pre.commit()
+_pre.close()
+
+# Point the database module at the partial DB and run init_schema.
+# Because backend.config.DB_PATH was bound at import time, we set both
+# the env var and re-execute the migration directly against the
+# partial DB to confirm the fix.
+os.environ["RAID_DB_PATH"] = _HOTFIX_DB
+import importlib  # noqa: E402
+import backend.config as _cfg  # noqa: E402
+importlib.reload(_cfg)
+import backend.database as _hf_db  # noqa: E402
+importlib.reload(_hf_db)
+
+# Run the migration against the partial DB.
+_hf_db._run_tariff_rate_migrations()
+
+# 76: every required column now exists
+with _hf_db.standalone_connection() as _hc:
+    _hf_cols = {r["name"] for r in _hc.execute(
+        "PRAGMA table_info(tariff_rates)").fetchall()}
+_required = {
+    "id", "category", "schedule_name", "subcategory", "condition_load",
+    "slab_start", "slab_end", "rate", "rate_per_unit", "fixed_charge",
+    "duty_percent", "meter_rent", "rebate", "effective_from",
+    "effective_to", "status", "source", "source_file", "notes",
+    "created_at", "updated_at",
+}
+_missing = _required - _hf_cols
+check("hotfix: ALL required columns present after migration on "
+      "partial pre-existing tariff_rates",
+      not _missing,
+      detail=f"missing columns: {sorted(_missing)}")
+
+# 77: pre-existing legacy row was preserved (NOT destroyed by migration)
+with _hf_db.standalone_connection() as _hc:
+    _legacy_row = _hc.execute(
+        "SELECT category, schedule_name FROM tariff_rates "
+        "WHERE category='LMV-1-LEGACY'"
+    ).fetchone()
+check("hotfix: pre-existing tariff_rates row preserved across migration",
+      _legacy_row is not None
+      and _legacy_row.get("category") == "LMV-1-LEGACY"
+      and _legacy_row.get("schedule_name") == "old_partial_schedule")
+
+# 78: hotfix-list new columns (subcategory, rate, source_file) all present
+check("hotfix: subcategory + rate + source_file columns added",
+      {"subcategory", "rate", "source_file"}.issubset(_hf_cols))
+
+# 79: re-running migration is a no-op (idempotency on the partial-→full path)
+_hf_db._run_tariff_rate_migrations()
+with _hf_db.standalone_connection() as _hc:
+    _hf_cols2 = {r["name"] for r in _hc.execute(
+        "PRAGMA table_info(tariff_rates)").fetchall()}
+check("hotfix: re-running migration is idempotent (no new columns)",
+      _hf_cols2 == _hf_cols)
+
+# 80: import_schedule now works against the migrated DB — this is the
+#     ORIGINAL failing-in-production scenario reproduced as a test.
+import importlib  # noqa: E402
+import backend.services.tariff_engine as _hf_te  # noqa: E402
+importlib.reload(_hf_te)
+
+_hf_xlsx = Path(tempfile.mktemp(prefix="raid_pr1_hotfix_imp_", suffix=".xlsx"))
+_hf_te.build_sample_workbook(_hf_xlsx)
+try:
+    _hf_imp = _hf_te.import_schedule(
+        str(_hf_xlsx),
+        schedule_name="hotfix_smoke",
+        schedule_effective_from="2025-04-01",
+        schedule_effective_to="2026-03-31",
+        source="pr1_hotfix_test",
+    )
+    _hf_ok = bool(_hf_imp.get("inserted", 0))
+    _hf_err = None
+except Exception as e:  # noqa: BLE001
+    _hf_ok = False
+    _hf_err = f"{type(e).__name__}: {e}"
+check("hotfix: import_schedule succeeds on migrated partial DB "
+      "(reproduces production bug fix)",
+      _hf_ok,
+      detail=f"err={_hf_err}" if not _hf_ok else "")
+
+
+# =====================================================================
+# Group H2: Hotfix — legacy `schedule_id NOT NULL` column (2 checks)
+# [81-82]
+#
+# Reproduces a SECOND production failure mode: the legacy mixed-branch
+# tariff_rates table had `schedule_id INTEGER NOT NULL` (a FK to a
+# parent tariff_schedules table). Before this fix, the engine's
+# 19-placeholder INSERT didn't include schedule_id, so every Excel
+# upload failed with:
+#   IntegrityError: NOT NULL constraint failed: tariff_rates.schedule_id
+# The engine now detects the column at insert time and:
+#   * lazily creates `tariff_schedules` if absent
+#   * lookup-or-creates a row matching schedule_name
+#   * builds a dynamic INSERT that includes schedule_id
+# =====================================================================
+_SID_DB = tempfile.mktemp(prefix="raid_pr1_sid_", suffix=".db")
+if os.path.exists(_SID_DB):
+    os.unlink(_SID_DB)
+
+# Build a legacy-shape tariff_rates with the failing NOT NULL schedule_id
+# column AND a parent tariff_schedules table (the typical FK setup).
+_pre = _sqlite3.connect(_SID_DB)
+_pre.execute("""
+    CREATE TABLE tariff_schedules (
+        id   INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE
+    )
+""")
+_pre.execute("""
+    CREATE TABLE tariff_rates (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        schedule_id   INTEGER NOT NULL,
+        category      TEXT,
+        schedule_name TEXT
+    )
+""")
+_pre.commit()
+_pre.close()
+
+os.environ["RAID_DB_PATH"] = _SID_DB
+import importlib  # noqa: E402
+import backend.config as _cfg2  # noqa: E402
+importlib.reload(_cfg2)
+import backend.database as _sid_db  # noqa: E402
+importlib.reload(_sid_db)
+import backend.services.tariff_engine as _sid_te  # noqa: E402
+importlib.reload(_sid_te)
+
+# Run the migration. CREATE TABLE IF NOT EXISTS is a no-op (table exists),
+# the per-column ALTER ADDs the missing 22 columns, and the schedule_id
+# NOT NULL constraint stays as-is.
+_sid_db._run_tariff_rate_migrations()
+
+# 81: schedule_id is detected as required
+with _sid_db.standalone_connection() as _sc:
+    _sid_required = _sid_te._detect_schedule_id_required(_sc)
+check("hotfix#2: _detect_schedule_id_required returns True on legacy DB",
+      _sid_required is True)
+
+# 82: import_schedule now succeeds despite the NOT NULL schedule_id —
+#     this is the EXACT second production scenario reproduced as a test.
+_sid_xlsx = Path(tempfile.mktemp(prefix="raid_pr1_sid_imp_", suffix=".xlsx"))
+_sid_te.build_sample_workbook(_sid_xlsx)
+try:
+    _sid_imp = _sid_te.import_schedule(
+        str(_sid_xlsx),
+        schedule_name="hotfix2_smoke",
+        schedule_effective_from="2025-04-01",
+        schedule_effective_to="2026-03-31",
+        source="pr1_hotfix2_test",
+    )
+    _sid_ok = bool(_sid_imp.get("inserted", 0))
+    _sid_err = None
+except Exception as e:  # noqa: BLE001
+    _sid_ok = False
+    _sid_err = f"{type(e).__name__}: {e}"
+check("hotfix#2: import_schedule succeeds on legacy schedule_id NOT NULL "
+      "DB (reproduces 2nd production bug)",
+      _sid_ok,
+      detail=f"err={_sid_err}" if not _sid_ok else "")
 
 
 # =====================================================================

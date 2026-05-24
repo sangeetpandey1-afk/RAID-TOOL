@@ -145,51 +145,130 @@ def _apply_lightweight_migrations() -> None:
             conn.execute(sql)
 
 
-# ----------------------------------------------------- PR1 migrations
-# tariff_rates table — timeline-aware rate schedule (PR1).
-# Idempotent + additive: safe to run repeatedly. Guarded by
-# CREATE TABLE IF NOT EXISTS for the base, and per-column
-# PRAGMA table_info checks for the 6 extension columns.
+# ----------------------------------------------------- tariff_rates migrations
+# tariff_rates table — timeline-aware rate schedule.
+# Idempotent + additive: safe to run repeatedly.
+#
+# HOTFIX (post-PR4): an earlier deployment created a partial tariff_rates
+# table (e.g. via the old mixed branch) that was missing slab_start /
+# rate_per_unit / etc. CREATE TABLE IF NOT EXISTS is a no-op on those
+# DBs, so the original "ALTER ADD COLUMN for the 6 PR1 extensions only"
+# migration silently left base columns missing — which then caused
+# Excel uploads to fail with "table tariff_rates has no column named
+# slab_start".
+#
+# This migration now verifies EVERY expected column individually via
+# PRAGMA table_info and ADDs any that's missing. Safe on:
+#   * fresh DBs                 — CREATE TABLE creates everything
+#   * partial pre-existing DBs  — ALTER ADD COLUMN fills the gaps
+#   * already-fully-migrated DBs — every check is a no-op
+# NEVER drops, NEVER recreates, NEVER destroys uploaded data.
 _TARIFF_RATES_BASE_DDL = """
 CREATE TABLE IF NOT EXISTS tariff_rates (
     id                       INTEGER PRIMARY KEY AUTOINCREMENT,
-    category                 TEXT NOT NULL,
+    category                 TEXT,
     slab_start               INTEGER,
     slab_end                 INTEGER,
     rate_per_unit            REAL,
+    rate                     REAL,
     fixed_charge             REAL,
     duty_percent             REAL,
     condition                TEXT,
+    condition_load           TEXT,
+    subcategory              TEXT,
+    slab_name                TEXT,
+    meter_rent               REAL,
+    rebate                   REAL,
     schedule_name            TEXT,
     schedule_effective_from  TEXT,
     schedule_effective_to    TEXT,
+    effective_from           TEXT,
+    effective_to             TEXT,
     status                   TEXT DEFAULT 'active',
     source                   TEXT,
+    source_file              TEXT,
     notes                    TEXT,
     created_at               TEXT DEFAULT (datetime('now')),
     updated_at               TEXT DEFAULT (datetime('now'))
 )
 """
 
-_TARIFF_RATES_PR1_COLUMNS: tuple[tuple[str, str], ...] = (
-    ("condition_load", "TEXT"),
-    ("slab_name",      "TEXT"),
-    ("rebate",         "REAL"),
-    ("meter_rent",     "REAL"),
-    ("effective_from", "TEXT"),
-    ("effective_to",   "TEXT"),
+# Full superset of every column tariff_rates is expected to have, across
+# every code path that ever touches it:
+#
+#   * the original PR1 schema (rate_per_unit, condition, slab_name,
+#     schedule_effective_from/to, source, ...) — kept because
+#     services/tariff_engine.py reads/writes these names
+#
+#   * the user's hotfix-list aliases (subcategory, rate, source_file) —
+#     reserved for forward compatibility / explicit operator request
+#
+# Each tuple is (column_name, alter_table_spec). The spec is what gets
+# appended after "ALTER TABLE tariff_rates ADD COLUMN <name>". SQLite
+# disallows NOT NULL on ALTER ADD COLUMN unless a DEFAULT is provided,
+# so `category` here is plain TEXT — fresh CREATE-TABLE keeps it nullable
+# too, since the import path drops blank rows via _is_blank_rate_row().
+_TARIFF_RATES_REQUIRED_COLUMNS: tuple[tuple[str, str], ...] = (
+    # --- columns that MUST exist for every code path ---
+    ("category",                "TEXT"),
+    ("schedule_name",           "TEXT"),
+    ("subcategory",             "TEXT"),
+    ("condition_load",          "TEXT"),
+    ("condition",               "TEXT"),
+    ("slab_name",               "TEXT"),
+    ("slab_start",              "INTEGER"),
+    ("slab_end",                "INTEGER"),
+    ("rate",                    "REAL"),
+    ("rate_per_unit",           "REAL"),
+    ("fixed_charge",            "REAL"),
+    ("duty_percent",            "REAL"),
+    ("meter_rent",              "REAL"),
+    ("rebate",                  "REAL"),
+    ("effective_from",          "TEXT"),
+    ("effective_to",            "TEXT"),
+    ("schedule_effective_from", "TEXT"),
+    ("schedule_effective_to",   "TEXT"),
+    ("status",                  "TEXT DEFAULT 'active'"),
+    ("source",                  "TEXT"),
+    ("source_file",             "TEXT"),
+    ("notes",                   "TEXT"),
+    # NOTE: SQLite's ALTER TABLE ADD COLUMN forbids non-constant defaults
+    # like (datetime('now')). The fresh CREATE TABLE above still uses
+    # DEFAULT (datetime('now')) for these two; on migrated partial DBs
+    # the columns are added as plain nullable TEXT — bookkeeping-only
+    # fields, never read by business logic. Existing rows keep whatever
+    # value they had; new rows get NULL unless the INSERT supplies one.
+    ("created_at",              "TEXT"),
+    ("updated_at",              "TEXT"),
 )
 
 
 def _run_tariff_rate_migrations() -> None:
-    """Bring tariff_rates up to PR1 shape (idempotent + additive)."""
+    """Bring tariff_rates up to the FULL required column set.
+
+    Step 1: CREATE TABLE IF NOT EXISTS — handles the fresh-DB path.
+    Step 2: For EVERY column in _TARIFF_RATES_REQUIRED_COLUMNS, check
+            PRAGMA table_info and ALTER ADD COLUMN if missing. This is
+            the critical fix — pre-existing partial tariff_rates tables
+            (where CREATE TABLE was a no-op) get all their missing
+            columns filled in.
+    Step 3: Ensure idx_tariff_rate_effective exists.
+    Idempotent + additive. NEVER drops / recreates / destroys data.
+    """
     with standalone_connection() as conn:
+        # Step 1
         conn.execute(_TARIFF_RATES_BASE_DDL)
+        # Step 2 — verify EVERY expected column individually
         existing = {r["name"] for r in
                     conn.execute("PRAGMA table_info(tariff_rates)").fetchall()}
-        for col, ddl in _TARIFF_RATES_PR1_COLUMNS:
+        for col, alter_spec in _TARIFF_RATES_REQUIRED_COLUMNS:
             if col not in existing:
-                conn.execute(f"ALTER TABLE tariff_rates ADD COLUMN {col} {ddl}")
+                conn.execute(
+                    f"ALTER TABLE tariff_rates ADD COLUMN {col} {alter_spec}"
+                )
+                log.info("Migration: added tariff_rates.%s (%s)",
+                         col, alter_spec)
+        # Step 3
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_tariff_rate_effective "
             "ON tariff_rates(effective_from, effective_to)"

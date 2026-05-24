@@ -298,14 +298,14 @@ def list_subcategories():
 
     rows = fetch_all(
         f"""SELECT COALESCE(NULLIF(TRIM(condition_load), ''), '__null__')
-                       AS subcategory,
+                       AS cl_value,
                    COUNT(*) AS row_count
               FROM tariff_rates
              WHERE (status IS NULL OR status='active')
                AND category = ?
                {date_sql}
-             GROUP BY subcategory
-             ORDER BY subcategory""",
+             GROUP BY cl_value
+             ORDER BY cl_value""",
         [category] + date_params,
     )
     return envelope_ok({
@@ -314,9 +314,9 @@ def list_subcategories():
         "subcategories": [{
             # Map back our '__null__' sentinel so the UI can render
             # "(not specified)" while we still allow saving null.
-            "value":      None if r["subcategory"] == "__null__" else r["subcategory"],
-            "label":      "(any load band)" if r["subcategory"] == "__null__"
-                          else r["subcategory"],
+            "value":      None if r["cl_value"] == "__null__" else r["cl_value"],
+            "label":      "(any load band)" if r["cl_value"] == "__null__"
+                          else r["cl_value"],
             "row_count":  int(r.get("row_count") or 0),
         } for r in rows],
     })
