@@ -1,0 +1,131 @@
+/* ==================================================================
+   Raid Management System — Offense Verification card (PR4).
+
+   All rules scoped under #offenseVerify so they cannot leak into
+   the existing dashboard / new-case header / cases / search / imports
+   panels. Loaded AFTER tariff.css so any conflicting rule wins.
+
+   Card states (data-state attribute):
+       empty    — operator hasn't typed an account yet
+       loading  — request in flight
+       no_hits  — account set but no prior offenses
+       hits     — at least one prior offense found
+       error    — backend returned an error
+   ================================================================== */
+
+#offenseVerify {
+  margin: 6px 0 10px;
+  padding: 6px 10px 8px;
+  border: 1px solid #d1d5db;
+  border-left: 4px solid #94a3b8;
+  border-radius: 4px;
+  background: #f8fafc;
+  font-size: 12px;
+}
+
+#offenseVerify[data-state="loading"] { border-left-color: #6366f1; background: #eef2ff; }
+#offenseVerify[data-state="no_hits"] { border-left-color: #10b981; background: #ecfdf5; }
+#offenseVerify[data-state="hits"]    { border-left-color: #ef4444; background: #fef2f2; }
+#offenseVerify[data-state="error"]   { border-left-color: #f59e0b; background: #fffbeb; }
+
+#offenseVerify .ov-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#offenseVerify .ov-icon  { font-size: 14px; }
+#offenseVerify .ov-title { font-weight: 600; color: #305496; }
+#offenseVerify .ov-status {
+  flex: 1;
+  color: #4b5563;
+}
+#offenseVerify .ov-toggle { padding: 2px 8px; font-size: 11px; min-height: 22px; }
+
+#offenseVerify .ov-body { margin-top: 6px; }
+
+/* ---- Hits summary ---- */
+#offenseVerify .ov-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 0 6px;
+  border-bottom: 1px dashed #fca5a5;
+}
+#offenseVerify .ov-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 11px;
+  margin-right: 8px;
+}
+#offenseVerify .ov-tag.red    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+#offenseVerify .ov-tag.green  { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+#offenseVerify .ov-tag.blue   { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+#offenseVerify .ov-tag.yellow { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
+#offenseVerify .ov-dates,
+#offenseVerify .ov-total { margin-left: 8px; color: #4b5563; }
+
+#offenseVerify .ov-multiplier {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+#offenseVerify .ov-mlabel { color: #4b5563; font-size: 11px; }
+#offenseVerify .ov-mvalue {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 1px 8px;
+  border-radius: 3px;
+}
+#offenseVerify .ov-mvalue.green  { background: #dcfce7; color: #166534; }
+#offenseVerify .ov-mvalue.yellow { background: #fef3c7; color: #92400e; }
+#offenseVerify .ov-mvalue.red    { background: #fee2e2; color: #991b1b; }
+
+/* ---- Empty / no-hits state ---- */
+#offenseVerify .ov-empty-state {
+  padding: 4px 2px;
+  color: #166534;
+}
+
+/* ---- Hits row table ---- */
+#offenseVerify .ov-rows { margin-top: 6px; }
+#offenseVerify .ov-table {
+  font-size: 11.5px;
+  margin: 0;
+}
+#offenseVerify .ov-table thead th {
+  background: #fee2e2;
+  color: #7f1d1d;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+#offenseVerify .ov-table tbody td {
+  vertical-align: top;
+}
+#offenseVerify .ov-table .pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+  background: #f3f4f6;
+}
+#offenseVerify .ov-table .pill.green { background: #dcfce7; color: #166534; }
+#offenseVerify .ov-table .pill.red   { background: #fee2e2; color: #991b1b; }
+#offenseVerify .ov-empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ---- Mobile (<=768) — drop the side-by-side summary to a stack ---- */
+@media (max-width: 768px) {
+  #offenseVerify .ov-summary { flex-direction: column; align-items: flex-start; }
+  #offenseVerify .ov-multiplier { width: 100%; justify-content: flex-end; }
+}

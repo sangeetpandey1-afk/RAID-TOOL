@@ -85,11 +85,15 @@ def create_app() -> Flask:
     # /api/historical; no existing route is shadowed or modified.
     from .routes.rates import bp as rates_bp
     from .routes.historical import bp as historical_bp
+    # PR4 — Offense Auto Verification (account-number-only, indexed,
+    # no fuzzy). Adds endpoints under /api/offense.
+    from .routes.offense import bp as offense_bp
 
     for bp in (health_bp, master_bp, consumer_bp, case_bp, doc_bp,
                payment_bp, inquiry_bp, notice_bp, devrate_bp,
                backup_bp, reports_bp,
-               rates_bp, historical_bp):
+               rates_bp, historical_bp,
+               offense_bp):
         app.register_blueprint(bp)
 
     # ----------------- error handlers (no more silent 500s) ----------

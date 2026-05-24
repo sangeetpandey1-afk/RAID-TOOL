@@ -16,6 +16,9 @@
   <!-- PR3 — Tariff dropdowns + preview styles (additive). Hides
        Supply Type label visually while keeping the <select> live. -->
   <link rel="stylesheet" href="/frontend/static/tariff.css" />
+  <!-- PR4 — Offense Verification card styles (additive). Scoped under
+       #offenseVerify so it cannot leak into other panels. -->
+  <link rel="stylesheet" href="/frontend/static/offense_verify.css" />
 </head>
 <body>
   <header class="topbar">
@@ -133,6 +136,25 @@
           </div>
         </div>
       </details>
+
+      <!-- PR4 — OFFENSE AUTO VERIFICATION CARD
+           Auto-populated by static/offense_verify.js as soon as the user
+           types/edits #f_account. Strictly account-number-only — no
+           fuzzy matching, no name lookups. Empty-state and no-hits state
+           are also rendered here so the operator always sees a status. -->
+      <div id="offenseVerify" class="offense-verify" data-state="empty">
+        <div class="ov-head">
+          <span class="ov-icon" aria-hidden="true">🔍</span>
+          <span class="ov-title">Offense Verification</span>
+          <span class="ov-status small" id="ovStatus">
+            type an account number above to auto-check prior offenses
+          </span>
+          <button type="button" class="btn small ov-toggle" id="ovToggle"
+                  aria-expanded="false" aria-controls="ovBody"
+                  style="display:none">expand</button>
+        </div>
+        <div class="ov-body" id="ovBody" hidden></div>
+      </div>
 
       <!-- ========== SECTION 2 — USER FOUND AT PREMISES ========== -->
       <h3 class="sec-title"><span class="sec-num">2</span> User Found at Premises
@@ -644,5 +666,9 @@
        to f_category / f_subcategory / f_inspection changes without
        overriding any existing handler. -->
   <script src="/frontend/static/tariff.js"></script>
+  <!-- PR4 — Offense Auto Verification (account-number-only, debounced
+       lookup against /api/offense/lookup). Loaded after app.js so it
+       can reuse API/$/toast and listens to #f_account input/blur. -->
+  <script src="/frontend/static/offense_verify.js"></script>
 </body>
 </html>
