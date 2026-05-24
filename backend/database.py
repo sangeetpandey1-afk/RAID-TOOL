@@ -71,8 +71,60 @@ def init_schema() -> None:
     with standalone_connection() as conn:
         conn.executescript(sql)
     log.info("Schema initialized at %s", DB_PATH)
+    _run_tariff_rate_migrations()
     _seed_devices_if_empty()
     _seed_config_if_empty()
+
+
+# ----------------------------------------------------- PR1 migrations
+# tariff_rates table — timeline-aware rate schedule (PR1).
+# Idempotent + additive: safe to run repeatedly. Guarded by
+# CREATE TABLE IF NOT EXISTS for the base, and per-column
+# PRAGMA table_info checks for the 6 extension columns.
+_TARIFF_RATES_BASE_DDL = """
+CREATE TABLE IF NOT EXISTS tariff_rates (
+    id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+    category                 TEXT NOT NULL,
+    slab_start               INTEGER,
+    slab_end                 INTEGER,
+    rate_per_unit            REAL,
+    fixed_charge             REAL,
+    duty_percent             REAL,
+    condition                TEXT,
+    schedule_name            TEXT,
+    schedule_effective_from  TEXT,
+    schedule_effective_to    TEXT,
+    status                   TEXT DEFAULT 'active',
+    source                   TEXT,
+    notes                    TEXT,
+    created_at               TEXT DEFAULT (datetime('now')),
+    updated_at               TEXT DEFAULT (datetime('now'))
+)
+"""
+
+_TARIFF_RATES_PR1_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("condition_load", "TEXT"),
+    ("slab_name",      "TEXT"),
+    ("rebate",         "REAL"),
+    ("meter_rent",     "REAL"),
+    ("effective_from", "TEXT"),
+    ("effective_to",   "TEXT"),
+)
+
+
+def _run_tariff_rate_migrations() -> None:
+    """Bring tariff_rates up to PR1 shape (idempotent + additive)."""
+    with standalone_connection() as conn:
+        conn.execute(_TARIFF_RATES_BASE_DDL)
+        existing = {r["name"] for r in
+                    conn.execute("PRAGMA table_info(tariff_rates)").fetchall()}
+        for col, ddl in _TARIFF_RATES_PR1_COLUMNS:
+            if col not in existing:
+                conn.execute(f"ALTER TABLE tariff_rates ADD COLUMN {col} {ddl}")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tariff_rate_effective "
+            "ON tariff_rates(effective_from, effective_to)"
+        )
 
 
 # ------------------------------------------------------------------ seed
