@@ -336,6 +336,88 @@ def _read_workbook_records(xlsx_path: Any) -> tuple[list[Optional[str]], list[di
     return canonical, records
 
 
+# =====================================================================
+# Legacy-schema interop  (HOTFIX 2)
+# =====================================================================
+# An older deployment created tariff_rates with a `schedule_id NOT NULL`
+# column (typically a FK to a separate tariff_schedules table). Our
+# canonical 19-placeholder _RATE_INSERT_SQL doesn't include schedule_id,
+# so on those DBs every INSERT failed with:
+#
+#     IntegrityError: NOT NULL constraint failed: tariff_rates.schedule_id
+#
+# At INSERT time we now:
+#   1. Inspect tariff_rates' actual columns via PRAGMA table_info.
+#   2. If `schedule_id` exists, ensure a tariff_schedules row exists for
+#      the current schedule_name (lookup-or-create), then build a
+#      *dynamic* INSERT SQL that prefixes schedule_id to the column list.
+#   3. Otherwise, use the canonical _RATE_INSERT_SQL unchanged — fresh
+#      DBs and DBs that never had schedule_id stay on the same path
+#      they've always been on, so PR1's _RATE_INSERT_SQL contract
+#      (19 placeholders) remains intact.
+#
+# `tariff_schedules` is created with CREATE TABLE IF NOT EXISTS, so on
+# a legacy DB that already has it as a parent table this is a no-op.
+_TARIFF_SCHEDULES_DDL = """
+CREATE TABLE IF NOT EXISTS tariff_schedules (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT UNIQUE,
+    created_at  TEXT DEFAULT (datetime('now'))
+)
+"""
+
+# INSERT SQL with schedule_id prefixed (used when the column exists).
+_RATE_INSERT_SQL_WITH_SCHEDULE_ID = """
+INSERT INTO tariff_rates (
+    schedule_id,
+    category, slab_start, slab_end, rate_per_unit, fixed_charge, duty_percent,
+    condition, schedule_name, schedule_effective_from, schedule_effective_to,
+    status, source, notes,
+    condition_load, slab_name, rebate, meter_rent, effective_from, effective_to
+) VALUES (?, ?,?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?,?,?)
+""".strip()
+
+
+def _resolve_schedule_id(schedule_name: Optional[str],
+                         conn: sqlite3.Connection) -> Optional[int]:
+    """Get-or-create a tariff_schedules row for `schedule_name`; return its id.
+
+    Used only when the legacy tariff_rates table has a NOT-NULL
+    schedule_id column. Idempotent: re-running for the same name
+    returns the same id thanks to the UNIQUE constraint.
+    """
+    name = (schedule_name or "(unnamed)").strip() or "(unnamed)"
+    conn.execute(_TARIFF_SCHEDULES_DDL)
+    row = conn.execute(
+        "SELECT id FROM tariff_schedules WHERE name = ?", (name,),
+    ).fetchone()
+    if row:
+        # row may be a dict (our _dict_factory) or a tuple
+        if isinstance(row, dict):
+            return row.get("id")
+        return row[0]
+    cur = conn.execute(
+        "INSERT INTO tariff_schedules (name) VALUES (?)", (name,),
+    )
+    return cur.lastrowid
+
+
+def _detect_schedule_id_required(conn: sqlite3.Connection) -> bool:
+    """True if tariff_rates has a `schedule_id` column.
+
+    We populate schedule_id whenever the column exists — not just when
+    NOT NULL — so legacy DBs with NULL-allowed schedule_id also stay
+    consistent with the new tariff_schedules parent table.
+    """
+    rows = conn.execute("PRAGMA table_info(tariff_rates)").fetchall()
+    for r in rows:
+        # r may be a dict or a tuple depending on row_factory
+        name = r["name"] if isinstance(r, dict) else r[1]
+        if name == "schedule_id":
+            return True
+    return False
+
+
 def _import_records(records: Iterable[dict],
                     schedule_name: Optional[str],
                     schedule_effective_from: Optional[str],
@@ -346,11 +428,18 @@ def _import_records(records: Iterable[dict],
     skipped_blank = 0
     sched_eff_from = _coerce_date(schedule_effective_from)
     sched_eff_to = _coerce_date(schedule_effective_to)
+
+    # Detect legacy schedule_id column shape ONCE per import (cheap).
+    needs_sid = _detect_schedule_id_required(conn)
+    sid = _resolve_schedule_id(schedule_name, conn) if needs_sid else None
+    insert_sql = (_RATE_INSERT_SQL_WITH_SCHEDULE_ID
+                  if needs_sid else _RATE_INSERT_SQL)
+
     for rec in records:
         if _is_blank_rate_row(rec):
             skipped_blank += 1
             continue
-        params = (
+        base_params = (
             _coerce_text(rec.get("category")),
             _coerce_int(rec.get("slab_start")),
             _coerce_int(rec.get("slab_end")),
@@ -372,7 +461,8 @@ def _import_records(records: Iterable[dict],
             _coerce_date(rec.get("effective_from")),
             _coerce_date(rec.get("effective_to")),
         )
-        conn.execute(_RATE_INSERT_SQL, params)
+        params = (sid, *base_params) if needs_sid else base_params
+        conn.execute(insert_sql, params)
         inserted += 1
     return {
         "schedule_name": schedule_name,
